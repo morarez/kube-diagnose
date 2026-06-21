@@ -224,7 +224,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 
 	// ── Log Watcher ───────────────────────────────────────────────────────────
 	logCh := make(chan *logwatcher.LogEntry, 4096)
-	normalizer := logwatcher.NewNormalizer("")
+	normalizer := logwatcher.NewNormalizer("", logger)
 	filter, _ := logwatcher.NewFilter([]string{"ERROR", "FATAL", "CRITICAL", "PANIC"}, nil)
 	watcher := logwatcher.NewWatcher(r.K8sClient, normalizer, filter, logCh, logger)
 

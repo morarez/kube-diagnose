@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -82,9 +84,15 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			resolution := ""
 			if incident.Status.Analysis != nil {
 				rootCause = incident.Status.Analysis.RootCause
-				if len(incident.Status.Analysis.RecommendedActions) > 0 {
-					resolution = incident.Status.Analysis.RecommendedActions[0]
+				var actions []string
+				for _, act := range incident.Status.Analysis.RecommendedActions {
+					if act.Command != "" {
+						actions = append(actions, fmt.Sprintf("%s (Run: %s)", act.Action, act.Command))
+					} else {
+						actions = append(actions, act.Action)
+					}
 				}
+				resolution = strings.Join(actions, "; ")
 			}
 
 			if err := platformComponents.RAGEngine.IndexResolvedIncident(

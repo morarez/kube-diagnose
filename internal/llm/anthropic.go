@@ -33,7 +33,7 @@ func NewAnthropicProvider(apiKey, model string, maxTokens int, logger *zap.Logge
 	}
 	c := anthropic.NewClient(option.WithAPIKey(apiKey))
 	return &AnthropicProvider{
-		client:    c,
+		client:    &c,
 		model:     model,
 		maxTokens: maxTokens,
 		logger:    logger,

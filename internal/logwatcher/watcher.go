@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"math"
 	"sync"
 	"time"
