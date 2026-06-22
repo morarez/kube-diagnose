@@ -326,6 +326,7 @@ type LogIntelligencePlatformStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=lip
+// +kubebuilder:metadata:annotations="api-approved.kubernetes.io=https://github.com/kubernetes/kubernetes/pull/1111"
 // +kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=".status.ready"
 // +kubebuilder:printcolumn:name="LLM",type="string",JSONPath=".spec.llm.provider"
 // +kubebuilder:printcolumn:name="Incidents",type="integer",JSONPath=".status.activeIncidents"

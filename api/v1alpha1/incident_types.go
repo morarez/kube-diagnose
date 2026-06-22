@@ -197,6 +197,7 @@ type IncidentStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=inc
+// +kubebuilder:metadata:annotations="api-approved.kubernetes.io=https://github.com/kubernetes/kubernetes/pull/1111"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Severity",type="string",JSONPath=".status.severity"
 // +kubebuilder:printcolumn:name="Count",type="integer",JSONPath=".status.count"
