@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"time"
 
@@ -92,9 +91,9 @@ const defaultOpenAIModel = string(openai.SmallEmbedding3)
 // dimensionality. The text-embedding-3-* models support custom dimensions, but
 // we default to their full size here.
 var openAIModelDimensions = map[string]int{
-	string(openai.SmallEmbedding3):  1536,
-	string(openai.LargeEmbedding3):  3072,
-	string(openai.AdaEmbeddingV2):   1536,
+	string(openai.SmallEmbedding3): 1536,
+	string(openai.LargeEmbedding3): 3072,
+	string(openai.AdaEmbeddingV2):  1536,
 }
 
 // OpenAIEmbedder wraps the OpenAI embeddings API.
@@ -245,7 +244,7 @@ func (e *OllamaEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 		if err != nil {
 			return fmt.Errorf("ollama HTTP request: %w", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
@@ -317,26 +316,3 @@ func NewEmbedder(provider, apiKey, model, endpoint string, logger *zap.Logger) (
 }
 
 // -----------------------------------------------------------------------------
-// Utility — cosine similarity (package-internal, used by engine.go)
-// -----------------------------------------------------------------------------
-
-// cosineSimilarity computes the cosine similarity between two float32 vectors.
-// It returns 0.0 if either vector has zero magnitude.
-func cosineSimilarity(a, b []float32) float64 {
-	if len(a) != len(b) || len(a) == 0 {
-		return 0
-	}
-
-	var dot, magA, magB float64
-	for i := range a {
-		va, vb := float64(a[i]), float64(b[i])
-		dot += va * vb
-		magA += va * va
-		magB += vb * vb
-	}
-
-	if magA == 0 || magB == 0 {
-		return 0
-	}
-	return dot / (math.Sqrt(magA) * math.Sqrt(magB))
-}

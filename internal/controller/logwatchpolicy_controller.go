@@ -87,7 +87,7 @@ func (r *LogWatchPolicyReconciler) syncWatchers(
 	policy *diagnosev1alpha1.LogWatchPolicy,
 ) (int, error) {
 	// Build the list of namespaces to watch.
-	namespacesToWatch := r.resolveNamespaces(ctx, policy)
+	namespacesToWatch := r.resolveNamespaces(policy)
 
 	// Build the label selector (if any).
 	var selector labels.Selector
@@ -96,14 +96,6 @@ func (r *LogWatchPolicyReconciler) syncWatchers(
 		selector, err = metav1.LabelSelectorAsSelector(policy.Spec.WorkloadSelector.LabelSelector)
 		if err != nil {
 			return 0, fmt.Errorf("parse label selector: %w", err)
-		}
-	}
-
-	// Compile the exclusion filter for this policy.
-	var exclusionPatterns []string
-	if policy.Spec.ExclusionPatterns != nil {
-		for _, ep := range policy.Spec.ExclusionPatterns {
-			exclusionPatterns = append(exclusionPatterns, ep.Pattern)
 		}
 	}
 
@@ -147,7 +139,7 @@ func (r *LogWatchPolicyReconciler) syncWatchers(
 
 // resolveNamespaces returns the list of namespaces to watch for the policy.
 // If none are specified, it defaults to the policy's own namespace.
-func (r *LogWatchPolicyReconciler) resolveNamespaces(ctx context.Context, policy *diagnosev1alpha1.LogWatchPolicy) []string {
+func (r *LogWatchPolicyReconciler) resolveNamespaces(policy *diagnosev1alpha1.LogWatchPolicy) []string {
 	if policy.Spec.WorkloadSelector == nil || len(policy.Spec.WorkloadSelector.Namespaces) == 0 {
 		return []string{policy.Namespace}
 	}

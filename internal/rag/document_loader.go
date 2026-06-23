@@ -254,7 +254,7 @@ func (l *DocumentLoader) ChunkDocument(doc Document, chunkSize, overlap int) []D
 		chunkSize = defaultChunkSize
 	}
 	if overlap < 0 {
-		overlap = 0
+		overlap = defaultOverlap
 	}
 	if overlap >= chunkSize {
 		overlap = chunkSize / 2

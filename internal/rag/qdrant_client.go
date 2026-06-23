@@ -100,7 +100,7 @@ type qdrantCollectionInfo struct {
 // qdrantGenericResponse captures the generic "status" field present in most
 // Qdrant write responses.
 type qdrantGenericResponse struct {
-	Status string `json:"status"`
+	Status string      `json:"status"`
 	Result interface{} `json:"result,omitempty"`
 }
 
@@ -192,7 +192,7 @@ func (c *QdrantClient) doRequest(ctx context.Context, method, url string, reqBod
 // if the HTTP status is not one of the provided acceptable codes, with the first
 // 4 KiB of the body included in the error message for diagnostics.
 func readAndClose(resp *http.Response, acceptableCodes ...int) ([]byte, error) {
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
@@ -287,11 +287,7 @@ func (c *QdrantClient) Upsert(ctx context.Context, collection string, points []Q
 
 	wire := make([]qdrantPointWire, len(points))
 	for i, p := range points {
-		wire[i] = qdrantPointWire{
-			ID:      p.ID,
-			Vector:  p.Vector,
-			Payload: p.Payload,
-		}
+		wire[i] = qdrantPointWire(p)
 	}
 
 	resp, err := c.doRequest(ctx, http.MethodPut, url, qdrantUpsertBody{Points: wire})

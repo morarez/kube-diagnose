@@ -51,7 +51,13 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: diagnosev1alpha1.LogIntelligencePlatformSpec{
+						Embedding: &diagnosev1alpha1.EmbeddingConfig{
+							Provider: diagnosev1alpha1.EmbeddingProviderOllama,
+							Model:    "nomic-embed-text",
+							Endpoint: "http://localhost:11434",
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

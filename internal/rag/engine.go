@@ -131,8 +131,8 @@ func (e *RAGEngine) IndexDocuments(ctx context.Context, docs []Document) error {
 	var (
 		successCount int
 		skipCount    int
-		batch        []QdrantPoint
 	)
+	batch := make([]QdrantPoint, 0, indexBatchSize)
 
 	flush := func() error {
 		if len(batch) == 0 {
