@@ -1,0 +1,319 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/1111
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: incidents.diagnose.diagnose.k8s.io
+spec:
+  group: diagnose.diagnose.k8s.io
+  names:
+    kind: Incident
+    listKind: IncidentList
+    plural: incidents
+    shortNames:
+    - inc
+    singular: incident
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.severity
+      name: Severity
+      type: string
+    - jsonPath: .status.count
+      name: Count
+      type: integer
+    - jsonPath: .status.pattern
+      name: Pattern
+      priority: 1
+      type: string
+    - jsonPath: .status.firstSeen
+      name: First Seen
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Incident is the Schema for the incidents API.
+          It represents a grouped, deduplicated error pattern with AI analysis.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              IncidentSpec defines the desired state of Incident.
+              Note: Incidents are primarily system-managed; spec is intentionally minimal.
+            properties:
+              acknowledged:
+                description: Acknowledged indicates the incident has been acknowledged
+                  by a human.
+                type: boolean
+              acknowledgedBy:
+                description: AcknowledgedBy is the user who acknowledged the incident.
+                type: string
+              notes:
+                description: Notes are operator notes about this incident.
+                type: string
+            type: object
+          status:
+            description: IncidentStatus defines the observed state of Incident.
+            properties:
+              affectedResources:
+                description: AffectedResources is the list of Kubernetes resources
+                  involved.
+                items:
+                  description: AffectedResource describes a Kubernetes resource involved
+                    in an incident.
+                  properties:
+                    container:
+                      description: Container is the container name (for pods).
+                      type: string
+                    kind:
+                      description: Kind is the resource kind (Pod, Deployment, StatefulSet,
+                        etc.)
+                      type: string
+                    name:
+                      description: Name is the resource name.
+                      type: string
+                    namespace:
+                      description: Namespace is the resource namespace.
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  - namespace
+                  type: object
+                type: array
+              analysis:
+                description: Analysis holds the AI/RAG analysis result.
+                properties:
+                  analysisSource:
+                    description: AnalysisSource indicates whether analysis came from
+                      RAG or LLM.
+                    enum:
+                    - rag
+                    - llm
+                    - cache
+                    - unknown
+                    type: string
+                  analyzedAt:
+                    description: AnalyzedAt is when the analysis was performed.
+                    format: date-time
+                    type: string
+                  confidence:
+                    description: Confidence is a 0.0–1.0 score indicating analysis
+                      certainty.
+                    type: number
+                  impact:
+                    description: Impact describes the business/service impact of the
+                      incident.
+                    type: string
+                  recommendedActions:
+                    description: RecommendedActions is the ordered list of remediation
+                      steps.
+                    items:
+                      description: RecommendedAction is a single actionable remediation
+                        step.
+                      properties:
+                        action:
+                          description: Action is the human-readable action description.
+                          type: string
+                        command:
+                          description: Command is an optional kubectl or shell command
+                            to run.
+                          type: string
+                        priority:
+                          description: 'Priority indicates urgency: immediate, short-term,
+                            long-term.'
+                          type: string
+                        step:
+                          description: Step is the action number/order.
+                          type: integer
+                      required:
+                      - action
+                      - step
+                      type: object
+                    type: array
+                  relatedRunbooks:
+                    description: RelatedRunbooks is a list of relevant runbook references.
+                    items:
+                      type: string
+                    type: array
+                  rootCause:
+                    description: RootCause is the identified root cause of the incident.
+                    type: string
+                  severity:
+                    description: Severity is the determined severity level.
+                    enum:
+                    - low
+                    - medium
+                    - high
+                    - critical
+                    type: string
+                  tokensUsed:
+                    description: TokensUsed is the LLM token count (for cost tracking).
+                    type: integer
+                type: object
+              conditions:
+                description: Conditions represent the latest available observations.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              count:
+                description: Count is the total number of occurrences.
+                format: int64
+                type: integer
+              fingerprint:
+                description: Fingerprint is the SimHash fingerprint of the error pattern.
+                type: string
+              firstSeen:
+                description: FirstSeen is when the incident was first detected.
+                format: date-time
+                type: string
+              frequencyWindows:
+                description: FrequencyWindows captures occurrence rates across time
+                  windows.
+                items:
+                  description: PatternWindow captures frequency data over a time window.
+                  properties:
+                    count:
+                      description: Count is the number of occurrences in this window.
+                      format: int64
+                      type: integer
+                    rate:
+                      description: Rate is occurrences per second.
+                      type: number
+                    window:
+                      description: Window is the duration (e.g. "1m", "5m", "15m").
+                      type: string
+                  required:
+                  - count
+                  - window
+                  type: object
+                type: array
+              lastSeen:
+                description: LastSeen is when the incident was most recently observed.
+                format: date-time
+                type: string
+              notified:
+                description: Notified indicates whether notifications have been sent.
+                type: boolean
+              notifiedAt:
+                description: NotifiedAt is when notifications were last sent.
+                format: date-time
+                type: string
+              pattern:
+                description: Pattern is the normalized, human-readable error pattern.
+                type: string
+              phase:
+                description: Phase is the current lifecycle phase.
+                enum:
+                - Detecting
+                - Analyzing
+                - Notified
+                - Acknowledged
+                - Resolved
+                - Archived
+                type: string
+              policyRef:
+                description: PolicyRef is the LogWatchPolicy that owns this incident.
+                type: string
+              resolved:
+                description: Resolved indicates whether the incident is resolved.
+                type: boolean
+              resolvedAt:
+                description: ResolvedAt is when the incident was resolved.
+                format: date-time
+                type: string
+              sampleLogMessage:
+                description: SampleLogMessage is a representative log line for this
+                  incident.
+                type: string
+              severity:
+                description: Severity is the determined severity level.
+                enum:
+                - low
+                - medium
+                - high
+                - critical
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
