@@ -114,7 +114,7 @@ func (p *OllamaProvider) Analyze(ctx context.Context, prompt string) (*AnalysisR
 	if err != nil {
 		return nil, fmt.Errorf("ollama http call: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 512))

@@ -74,7 +74,7 @@ func (s *SlackNotifier) Send(ctx context.Context, n *IncidentNotification) error
 		actionsText = strings.Join(actions, "\n")
 	}
 
-	affectedText := fmt.Sprintf("%d pods", len(n.AffectedPods))
+	var affectedText string
 	if len(n.AffectedPods) <= 3 {
 		affectedText = strings.Join(n.AffectedPods, ", ")
 	} else {

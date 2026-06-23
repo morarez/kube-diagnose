@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const severityMedium = "medium"
+
 // ---------------------------------------------------------------------------
 // AnalysisCache
 // ---------------------------------------------------------------------------
@@ -92,20 +94,20 @@ func (c *AnalysisCache) Purge() {
 //  4. Try each configured LLM provider in order; return on first success.
 //  5. Cache and return the result.
 type Analyzer struct {
-	providers                    []LLMProvider
-	cache                        *AnalysisCache
-	ragConfidenceThreshold       float64
+	providers                      []LLMProvider
+	cache                          *AnalysisCache
+	ragConfidenceThreshold         float64
 	criticalRAGConfidenceThreshold float64
-	maxCallsPerHour              int
+	maxCallsPerHour                int
 
-	mu           sync.Mutex
+	mu            sync.Mutex
 	callsThisHour int
 	hourResetAt   time.Time
 
 	// stats for observability
-	cacheHits   int64
+	cacheHits    int64
 	ragShortcuts int64
-	llmCalls    int64
+	llmCalls     int64
 
 	logger *zap.Logger
 }
@@ -135,13 +137,13 @@ func NewAnalyzer(
 		maxCallsPerHour = 60
 	}
 	return &Analyzer{
-		providers:                    providers,
-		cache:                        newAnalysisCache(cacheTTL),
-		ragConfidenceThreshold:       ragThreshold,
+		providers:                      providers,
+		cache:                          newAnalysisCache(cacheTTL),
+		ragConfidenceThreshold:         ragThreshold,
 		criticalRAGConfidenceThreshold: criticalThreshold,
-		maxCallsPerHour:              maxCallsPerHour,
-		hourResetAt:                  time.Now().Add(time.Hour),
-		logger:                       logger.With(zap.String("component", "llm_analyzer")),
+		maxCallsPerHour:                maxCallsPerHour,
+		hourResetAt:                    time.Now().Add(time.Hour),
+		logger:                         logger.With(zap.String("component", "llm_analyzer")),
 	}
 }
 
@@ -306,7 +308,7 @@ func ragOnlyResult(ragContext string, ragConfidence float64, severity string) *A
 	}
 
 	if severity == "" {
-		severity = "medium"
+		severity = severityMedium
 	}
 
 	return &AnalysisResult{

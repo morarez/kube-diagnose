@@ -50,7 +50,7 @@ func (p *AnthropicProvider) Analyze(ctx context.Context, prompt string) (*Analys
 	systemMsg, userMsg := splitPrompt(prompt)
 
 	params := anthropic.MessageNewParams{
-		Model:     anthropic.Model(p.model),
+		Model:     p.model,
 		MaxTokens: int64(p.maxTokens),
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(userMsg)),

@@ -179,10 +179,10 @@ func (w *Watcher) WatchedCount() int {
 
 // backoffConfig holds the parameters for the reconnection back-off strategy.
 const (
-	backoffBase    = 1 * time.Second
-	backoffMax     = 30 * time.Second
-	backoffFactor  = 2.0
-	tailLines      = int64(100)
+	backoffBase   = 1 * time.Second
+	backoffMax    = 30 * time.Second
+	backoffFactor = 2.0
+	tailLines     = int64(100)
 )
 
 // streamLoop is the goroutine body. It repeatedly opens a log stream and reads
@@ -284,7 +284,7 @@ func (w *Watcher) streamOnce(
 		)
 		return false, false
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	scanner := bufio.NewScanner(stream)
 	// Increase the scanner buffer to handle very long log lines (e.g. stack traces).
