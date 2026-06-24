@@ -1,5 +1,5 @@
 // Package llm provides a unified interface for interacting with multiple large
-// language model providers (OpenAI, Anthropic, Ollama) for Kubernetes incident
+// language model providers (OpenAI, Anthropic) for Kubernetes incident
 // analysis. It includes prompt engineering helpers, an in-memory cache with TTL,
 // rate-limit controls, and a provider-fallback chain.
 package llm
@@ -38,7 +38,6 @@ type AnalysisResult struct {
 	// AnalysisSource indicates where the result originated:
 	//   "openai"    – OpenAI API
 	//   "anthropic" – Anthropic API
-	//   "ollama"    – local Ollama instance
 	//   "rag"       – retrieval-augmented generation only (no LLM call)
 	//   "cache"     – returned from the in-memory cache
 	AnalysisSource string `json:"analysis_source"`

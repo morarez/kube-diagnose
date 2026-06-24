@@ -4,12 +4,8 @@
 package rag
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	openai "github.com/sashabaranov/go-openai"
@@ -170,132 +166,14 @@ func (e *OpenAIEmbedder) Embed(ctx context.Context, text string) ([]float32, err
 func (e *OpenAIEmbedder) Dimensions() int { return e.dimensions }
 
 // -----------------------------------------------------------------------------
-// OllamaEmbedder
-// -----------------------------------------------------------------------------
-
-const (
-	defaultOllamaModel     = "nomic-embed-text"
-	defaultOllamaDimension = 768
-)
-
-// ollamaEmbedRequest is the JSON body for POST /api/embeddings.
-type ollamaEmbedRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-}
-
-// ollamaEmbedResponse is the JSON response body from /api/embeddings.
-type ollamaEmbedResponse struct {
-	Embedding []float32 `json:"embedding"`
-}
-
-// OllamaEmbedder calls a locally-running Ollama instance to produce embeddings.
-type OllamaEmbedder struct {
-	endpoint   string // e.g. "http://localhost:11434"
-	model      string
-	dimensions int
-	httpClient *http.Client
-	logger     *zap.Logger
-}
-
-// NewOllamaEmbedder constructs an OllamaEmbedder.
-// endpoint is the base URL of the Ollama server (e.g. "http://localhost:11434").
-// If model is empty the default model (nomic-embed-text) is used.
-func NewOllamaEmbedder(endpoint, model string, logger *zap.Logger) *OllamaEmbedder {
-	if model == "" {
-		model = defaultOllamaModel
-	}
-
-	return &OllamaEmbedder{
-		endpoint: endpoint,
-		model:    model,
-		// Ollama does not expose per-model dimension metadata via a simple API;
-		// we default to nomic-embed-text's 768 dimensions. Callers embedding
-		// with a different model should provide the correct value if they need
-		// strict validation downstream.
-		dimensions: defaultOllamaDimension,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		logger:     logger.With(zap.String("embedder", "ollama"), zap.String("model", model)),
-	}
-}
-
-// Embed returns the vector embedding for text by calling the Ollama HTTP API.
-// It retries up to 3 times with exponential backoff on transient errors.
-func (e *OllamaEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
-	var result []float32
-
-	err := withRetry(ctx, e.logger, "ollama.Embed", func() error {
-		body, err := json.Marshal(ollamaEmbedRequest{
-			Model:  e.model,
-			Prompt: text,
-		})
-		if err != nil {
-			// Marshalling failure is not transient; stop retrying.
-			return fmt.Errorf("marshal ollama request: %w", err)
-		}
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.endpoint+"/api/embeddings", bytes.NewReader(body))
-		if err != nil {
-			return fmt.Errorf("create ollama HTTP request: %w", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := e.httpClient.Do(req)
-		if err != nil {
-			return fmt.Errorf("ollama HTTP request: %w", err)
-		}
-		defer func() { _ = resp.Body.Close() }()
-
-		if resp.StatusCode != http.StatusOK {
-			raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-			return fmt.Errorf("ollama returned status %d: %s", resp.StatusCode, string(raw))
-		}
-
-		var embedResp ollamaEmbedResponse
-		if err := json.NewDecoder(resp.Body).Decode(&embedResp); err != nil {
-			return fmt.Errorf("decode ollama response: %w", err)
-		}
-		if len(embedResp.Embedding) == 0 {
-			return fmt.Errorf("ollama returned empty embedding")
-		}
-
-		result = embedResp.Embedding
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Update cached dimensions from actual response (helpful for non-default models).
-	if len(result) != e.dimensions {
-		e.logger.Info("ollama embedding dimensions differ from default, updating cached value",
-			zap.Int("expected", e.dimensions),
-			zap.Int("actual", len(result)),
-		)
-		e.dimensions = len(result)
-	}
-
-	e.logger.Debug("embedded text via Ollama",
-		zap.Int("textLen", len(text)),
-		zap.Int("dims", len(result)),
-	)
-	return result, nil
-}
-
-// Dimensions returns the number of dimensions in the embedding vectors.
-func (e *OllamaEmbedder) Dimensions() int { return e.dimensions }
-
-// -----------------------------------------------------------------------------
 // Factory
 // -----------------------------------------------------------------------------
 
 // NewEmbedder constructs an Embedder based on the given provider name.
 //
-// provider must be one of "openai" or "ollama".
+// provider must be "openai".
 //
 //   - For "openai": apiKey and model are used. model defaults to text-embedding-3-small.
-//   - For "ollama": endpoint and model are used. model defaults to nomic-embed-text.
-//     endpoint defaults to "http://localhost:11434".
 func NewEmbedder(provider, apiKey, model, endpoint string, logger *zap.Logger) (Embedder, error) {
 	switch provider {
 	case "openai":
@@ -304,14 +182,8 @@ func NewEmbedder(provider, apiKey, model, endpoint string, logger *zap.Logger) (
 		}
 		return NewOpenAIEmbedder(apiKey, model, logger), nil
 
-	case "ollama":
-		if endpoint == "" {
-			endpoint = "http://localhost:11434"
-		}
-		return NewOllamaEmbedder(endpoint, model, logger), nil
-
 	default:
-		return nil, fmt.Errorf("unsupported embedder provider %q: must be one of [openai, ollama]", provider)
+		return nil, fmt.Errorf("unsupported embedder provider %q: must be one of [openai]", provider)
 	}
 }
 

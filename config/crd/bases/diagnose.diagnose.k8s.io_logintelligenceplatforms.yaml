@@ -109,7 +109,7 @@ spec:
                     - name
                     type: object
                   endpoint:
-                    description: Endpoint is the embedding API endpoint (for Ollama).
+                    description: Endpoint is the embedding API endpoint.
                     type: string
                   model:
                     default: text-embedding-3-small
@@ -120,7 +120,6 @@ spec:
                     description: Provider is the embedding provider.
                     enum:
                     - openai
-                    - ollama
                     type: string
                 required:
                 - provider
@@ -160,7 +159,7 @@ spec:
                   apiKeySecretRef:
                     description: |-
                       APIKeySecretRef references a secret containing the API key.
-                      Not required for Ollama/vLLM.
+                      Not required for vLLM.
                     properties:
                       key:
                         description: Key is the key within the secret.
@@ -175,7 +174,7 @@ spec:
                   endpoint:
                     description: |-
                       Endpoint is the API endpoint URL.
-                      Required for Ollama and vLLM.
+                      Required for vLLM.
                     type: string
                   maxTokens:
                     default: 2048
@@ -191,7 +190,6 @@ spec:
                     enum:
                     - openai
                     - anthropic
-                    - ollama
                     - vllm
                     type: string
                   temperature:

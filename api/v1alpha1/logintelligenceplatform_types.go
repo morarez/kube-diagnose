@@ -21,23 +21,21 @@ import (
 )
 
 // LLMProvider defines the AI provider configuration.
-// +kubebuilder:validation:Enum=openai;anthropic;ollama;vllm
+// +kubebuilder:validation:Enum=openai;anthropic;vllm
 type LLMProvider string
 
 const (
 	LLMProviderOpenAI    LLMProvider = "openai"
 	LLMProviderAnthropic LLMProvider = "anthropic"
-	LLMProviderOllama    LLMProvider = "ollama"
 	LLMProviderVLLM      LLMProvider = "vllm"
 )
 
 // EmbeddingProvider defines which service to use for vector embeddings.
-// +kubebuilder:validation:Enum=openai;ollama
+// +kubebuilder:validation:Enum=openai
 type EmbeddingProvider string
 
 const (
 	EmbeddingProviderOpenAI EmbeddingProvider = "openai"
-	EmbeddingProviderOllama EmbeddingProvider = "ollama"
 )
 
 // SecretKeyRef references a Kubernetes secret key.
@@ -62,12 +60,12 @@ type LLMConfig struct {
 	Model string `json:"model,omitempty"`
 
 	// APIKeySecretRef references a secret containing the API key.
-	// Not required for Ollama/vLLM.
+	// Not required for vLLM.
 	// +optional
 	APIKeySecretRef *SecretKeyRef `json:"apiKeySecretRef,omitempty"`
 
 	// Endpoint is the API endpoint URL.
-	// Required for Ollama and vLLM.
+	// Required for vLLM.
 	// +optional
 	Endpoint string `json:"endpoint,omitempty"`
 
@@ -96,7 +94,7 @@ type EmbeddingConfig struct {
 	// +optional
 	APIKeySecretRef *SecretKeyRef `json:"apiKeySecretRef,omitempty"`
 
-	// Endpoint is the embedding API endpoint (for Ollama).
+	// Endpoint is the embedding API endpoint.
 	// +optional
 	Endpoint string `json:"endpoint,omitempty"`
 }

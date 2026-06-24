@@ -31,8 +31,17 @@ type OpenAIProvider struct {
 // A default temperature of 0.2 is used to keep responses deterministic while
 // still allowing some variation in phrasing.
 func NewOpenAIProvider(apiKey, model string, maxTokens int, logger *zap.Logger) *OpenAIProvider {
+	return NewOpenAIProviderWithEndpoint(apiKey, model, "", maxTokens, logger)
+}
+
+// NewOpenAIProviderWithEndpoint creates an OpenAIProvider targeting a custom BaseURL.
+func NewOpenAIProviderWithEndpoint(apiKey, model, endpoint string, maxTokens int, logger *zap.Logger) *OpenAIProvider {
+	config := openai.DefaultConfig(apiKey)
+	if endpoint != "" {
+		config.BaseURL = endpoint
+	}
 	return &OpenAIProvider{
-		client:      openai.NewClient(apiKey),
+		client:      openai.NewClientWithConfig(config),
 		model:       model,
 		maxTokens:   maxTokens,
 		temperature: 0.2,

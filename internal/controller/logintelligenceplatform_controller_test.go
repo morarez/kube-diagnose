@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -43,8 +44,28 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 		logintelligenceplatform := &diagnosev1alpha1.LogIntelligencePlatform{}
 
 		BeforeEach(func() {
+			By("creating the mock Secret containing OpenAI API key")
+			secret := &corev1.Secret{}
+			secretName := types.NamespacedName{
+				Name:      "test-secret",
+				Namespace: "default",
+			}
+			err := k8sClient.Get(ctx, secretName, secret)
+			if err != nil && errors.IsNotFound(err) {
+				secretObj := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "default",
+					},
+					Data: map[string][]byte{
+						"openai-key": []byte("dummy-key"),
+					},
+				}
+				Expect(k8sClient.Create(ctx, secretObj)).To(Succeed())
+			}
+
 			By("creating the custom resource for the Kind LogIntelligencePlatform")
-			err := k8sClient.Get(ctx, typeNamespacedName, logintelligenceplatform)
+			err = k8sClient.Get(ctx, typeNamespacedName, logintelligenceplatform)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &diagnosev1alpha1.LogIntelligencePlatform{
 					ObjectMeta: metav1.ObjectMeta{
@@ -53,9 +74,12 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 					},
 					Spec: diagnosev1alpha1.LogIntelligencePlatformSpec{
 						Embedding: &diagnosev1alpha1.EmbeddingConfig{
-							Provider: diagnosev1alpha1.EmbeddingProviderOllama,
-							Model:    "nomic-embed-text",
-							Endpoint: "http://localhost:11434",
+							Provider: diagnosev1alpha1.EmbeddingProviderOpenAI,
+							Model:    "text-embedding-3-small",
+							APIKeySecretRef: &diagnosev1alpha1.SecretKeyRef{
+								Name: "test-secret",
+								Key:  "openai-key",
+							},
 						},
 					},
 				}
@@ -64,13 +88,23 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &diagnosev1alpha1.LogIntelligencePlatform{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Cleanup the specific resource instance LogIntelligencePlatform")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+
+			By("Cleanup the mock Secret")
+			secret := &corev1.Secret{}
+			secretName := types.NamespacedName{
+				Name:      "test-secret",
+				Namespace: "default",
+			}
+			err = k8sClient.Get(ctx, secretName, secret)
+			if err == nil {
+				Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+			}
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")

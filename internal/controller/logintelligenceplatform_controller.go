@@ -434,21 +434,12 @@ func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
 			model = "claude-3-5-haiku-latest"
 		}
 		return llm.NewAnthropicProvider(apiKey, model, maxTokens, logger), nil
-	case diagnosev1alpha1.LLMProviderOllama:
-		endpoint := cfg.Endpoint
-		if endpoint == "" {
-			endpoint = "http://ollama:11434"
-		}
-		if model == "" {
-			model = "llama3.2"
-		}
-		return llm.NewOllamaProvider(endpoint, model, maxTokens, logger), nil
 	case diagnosev1alpha1.LLMProviderVLLM:
 		endpoint := cfg.Endpoint
 		if endpoint == "" {
 			endpoint = "http://vllm:8000"
 		}
-		return llm.NewOllamaProvider(endpoint, model, maxTokens, logger), nil
+		return llm.NewOpenAIProviderWithEndpoint(apiKey, model, endpoint, maxTokens, logger), nil
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)
 	}
@@ -502,6 +493,9 @@ func (r *LogIntelligencePlatformReconciler) resolveSecretKey(
 ) (string, error) {
 	if ref == nil {
 		return "", nil
+	}
+	if namespace == "" {
+		namespace = "default"
 	}
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
