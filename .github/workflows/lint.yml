@@ -8,6 +8,8 @@ jobs:
   lint:
     name: Run on Ubuntu
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Clone the code
         uses: actions/checkout@v4
