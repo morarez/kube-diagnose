@@ -117,10 +117,6 @@ type LogWatchPolicySpec struct {
 	// +optional
 	IncidentConfig *IncidentConfig `json:"incidentConfig,omitempty"`
 
-	// NotificationOverride overrides the global notification config for this policy.
-	// +optional
-	NotificationOverride *NotificationConfig `json:"notificationOverride,omitempty"`
-
 	// Enabled controls whether this policy is active.
 	// +optional
 	// +kubebuilder:default=true

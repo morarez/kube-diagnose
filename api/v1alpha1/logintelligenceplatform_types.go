@@ -127,86 +127,6 @@ type QdrantConfig struct {
 	CollectionPrefix string `json:"collectionPrefix,omitempty"`
 }
 
-// SlackConfig defines Slack notification settings.
-type SlackConfig struct {
-	// Enabled controls whether Slack notifications are sent.
-	// +optional
-	Enabled bool `json:"enabled,omitempty"`
-
-	// WebhookURLSecretRef references a secret with the Slack webhook URL.
-	// +optional
-	WebhookURLSecretRef *SecretKeyRef `json:"webhookURLSecretRef,omitempty"`
-
-	// Channel is the Slack channel (overrides webhook default).
-	// +optional
-	Channel string `json:"channel,omitempty"`
-
-	// MinSeverity is the minimum severity to notify about.
-	// +optional
-	// +kubebuilder:default="high"
-	MinSeverity string `json:"minSeverity,omitempty"`
-}
-
-// PagerDutyConfig defines PagerDuty notification settings.
-type PagerDutyConfig struct {
-	// Enabled controls whether PagerDuty notifications are sent.
-	// +optional
-	Enabled bool `json:"enabled,omitempty"`
-
-	// IntegrationKeySecretRef references a secret with the PagerDuty integration key.
-	// +optional
-	IntegrationKeySecretRef *SecretKeyRef `json:"integrationKeySecretRef,omitempty"`
-
-	// MinSeverity is the minimum severity to trigger a PagerDuty incident.
-	// +optional
-	// +kubebuilder:default="critical"
-	MinSeverity string `json:"minSeverity,omitempty"`
-}
-
-// WebhookNotificationConfig defines generic webhook notification settings.
-type WebhookNotificationConfig struct {
-	// Enabled controls whether webhook notifications are sent.
-	// +optional
-	Enabled bool `json:"enabled,omitempty"`
-
-	// URL is the webhook endpoint URL.
-	// +optional
-	URL string `json:"url,omitempty"`
-
-	// Method is the HTTP method to use (POST or PUT).
-	// +optional
-	// +kubebuilder:default="POST"
-	Method string `json:"method,omitempty"`
-
-	// Headers are additional HTTP headers to include.
-	// +optional
-	Headers map[string]string `json:"headers,omitempty"`
-
-	// SecretRef is an optional HMAC secret for request signing.
-	// +optional
-	SecretRef *SecretKeyRef `json:"secretRef,omitempty"`
-
-	// MinSeverity is the minimum severity to trigger the webhook.
-	// +optional
-	// +kubebuilder:default="high"
-	MinSeverity string `json:"minSeverity,omitempty"`
-}
-
-// NotificationConfig defines all notification channel settings.
-type NotificationConfig struct {
-	// Slack notification settings.
-	// +optional
-	Slack *SlackConfig `json:"slack,omitempty"`
-
-	// PagerDuty notification settings.
-	// +optional
-	PagerDuty *PagerDutyConfig `json:"pagerDuty,omitempty"`
-
-	// Webhook notification settings.
-	// +optional
-	Webhook *WebhookNotificationConfig `json:"webhook,omitempty"`
-}
-
 // AnalysisConfig defines when and how AI analysis is triggered.
 type AnalysisConfig struct {
 	// RAGConfidenceThreshold is the minimum RAG similarity score to skip LLM analysis.
@@ -262,10 +182,6 @@ type LogIntelligencePlatformSpec struct {
 	// Qdrant is the vector store configuration.
 	// +optional
 	Qdrant *QdrantConfig `json:"qdrant,omitempty"`
-
-	// Notifications configures alert channels.
-	// +optional
-	Notifications *NotificationConfig `json:"notifications,omitempty"`
 
 	// Analysis configures AI analysis behavior and cost controls.
 	// +optional

@@ -38,7 +38,6 @@ import (
 	"github.com/morarez/kube-diagnose/internal/dashboard"
 	"github.com/morarez/kube-diagnose/internal/llm"
 	"github.com/morarez/kube-diagnose/internal/logwatcher"
-	"github.com/morarez/kube-diagnose/internal/notifier"
 	"github.com/morarez/kube-diagnose/internal/rag"
 )
 
@@ -54,7 +53,6 @@ type PlatformComponents struct {
 	PatternDetector *aggregator.PatternDetector
 	RAGEngine       *rag.RAGEngine
 	Analyzer        *llm.Analyzer
-	Notifier        *notifier.Notifier
 	Dashboard       *dashboard.Server
 	LogCh           chan *logwatcher.LogEntry
 	Logger          *zap.Logger
@@ -228,9 +226,6 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	filter, _ := logwatcher.NewFilter([]string{"ERROR", "FATAL", "CRITICAL", "PANIC"}, nil)
 	watcher := logwatcher.NewWatcher(r.K8sClient, normalizer, filter, logCh, logger)
 
-	// ── Notifiers ─────────────────────────────────────────────────────────────
-	notif := r.buildNotifier(ctx, platform, logger)
-
 	// ── Dashboard ─────────────────────────────────────────────────────────────
 	dashPort := 8080
 	if spec.DashboardPort > 0 {
@@ -242,7 +237,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	}
 
 	// ── Log processing pipeline ───────────────────────────────────────────────
-	go r.runLogPipeline(childCtx, logCh, incidentStore, patternDetector, ragEngine, analyzer, notif, logger)
+	go r.runLogPipeline(childCtx, logCh, incidentStore, patternDetector, ragEngine, analyzer, logger)
 
 	platformComponents = &PlatformComponents{
 		Watcher:         watcher,
@@ -250,7 +245,6 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 		PatternDetector: patternDetector,
 		RAGEngine:       ragEngine,
 		Analyzer:        analyzer,
-		Notifier:        notif,
 		Dashboard:       dash,
 		LogCh:           logCh,
 		Logger:          logger,
@@ -274,7 +268,6 @@ func (r *LogIntelligencePlatformReconciler) runLogPipeline(
 	detector *aggregator.PatternDetector,
 	ragEngine *rag.RAGEngine,
 	analyzer *llm.Analyzer,
-	notif *notifier.Notifier,
 	logger *zap.Logger,
 ) {
 	fp := aggregator.NewFingerprinter()
@@ -346,25 +339,6 @@ func (r *LogIntelligencePlatformReconciler) runLogPipeline(
 					TokensUsed:         result.TokensUsed,
 				}
 				store.UpdateSeverityAndAnalysis(rec.Fingerprint, result.Severity, analysisData)
-
-				// Send notification.
-				n := &notifier.IncidentNotification{
-					IncidentName:       rec.CRDName,
-					Namespace:          rec.Namespace,
-					Pattern:            rec.Pattern,
-					Count:              rec.Count,
-					Severity:           result.Severity,
-					Phase:              "Analyzing",
-					AffectedPods:       affectedPods,
-					RootCause:          result.RootCause,
-					RecommendedActions: result.RecommendedActions,
-					FirstSeen:          rec.FirstSeen,
-					LastSeen:           rec.LastSeen,
-					DashboardURL:       fmt.Sprintf("http://localhost:8080/incidents/%s", rec.Fingerprint),
-				}
-				if err := notif.Notify(analysisCtx, n); err != nil {
-					logger.Warn("notification failed", zap.Error(err))
-				}
 			}(rec)
 		}
 	}
@@ -443,46 +417,6 @@ func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)
 	}
-}
-
-// buildNotifier constructs a notifier from the platform spec.
-func (r *LogIntelligencePlatformReconciler) buildNotifier(
-	ctx context.Context,
-	platform *diagnosev1alpha1.LogIntelligencePlatform,
-	logger *zap.Logger,
-) *notifier.Notifier {
-	var channels []notifier.NotificationChannel
-
-	if platform.Spec.Notifications == nil {
-		return notifier.NewNotifier(channels, logger)
-	}
-	cfg := platform.Spec.Notifications
-
-	if cfg.Slack != nil && cfg.Slack.Enabled && cfg.Slack.WebhookURLSecretRef != nil {
-		webhookURL, err := r.resolveSecretKey(ctx, platform.Namespace, cfg.Slack.WebhookURLSecretRef)
-		if err == nil {
-			channels = append(channels, notifier.NewSlackNotifier(webhookURL, cfg.Slack.Channel, cfg.Slack.MinSeverity, logger))
-		}
-	}
-
-	if cfg.PagerDuty != nil && cfg.PagerDuty.Enabled && cfg.PagerDuty.IntegrationKeySecretRef != nil {
-		integrationKey, err := r.resolveSecretKey(ctx, platform.Namespace, cfg.PagerDuty.IntegrationKeySecretRef)
-		if err == nil {
-			channels = append(channels, notifier.NewPagerDutyNotifier(integrationKey, cfg.PagerDuty.MinSeverity, logger))
-		}
-	}
-
-	if cfg.Webhook != nil && cfg.Webhook.Enabled && cfg.Webhook.URL != "" {
-		hmacSecret := ""
-		if cfg.Webhook.SecretRef != nil {
-			hmacSecret, _ = r.resolveSecretKey(ctx, platform.Namespace, cfg.Webhook.SecretRef)
-		}
-		channels = append(channels, notifier.NewWebhookNotifier(
-			cfg.Webhook.URL, cfg.Webhook.Method, cfg.Webhook.MinSeverity, hmacSecret, cfg.Webhook.Headers, logger,
-		))
-	}
-
-	return notifier.NewNotifier(channels, logger)
 }
 
 // resolveSecretKey fetches a secret key value from Kubernetes.
