@@ -14,8 +14,6 @@ linters:
     - ginkgolinter
     - goconst
     - gocyclo
-    - gofmt
-    - goimports
     - gosimple
     - govet
     - ineffassign
@@ -44,3 +42,8 @@ linters:
         linters:
           - dupl
           - lll
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
