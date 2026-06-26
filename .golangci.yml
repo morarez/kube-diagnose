@@ -4,18 +4,9 @@ run:
   timeout: 5m
   allow-parallel-runners: true
 
-issues:
-  exclude-rules:
-    - path: "api/*"
-      linters:
-        - lll
-    - path: "internal/*"
-      linters:
-        - dupl
-        - lll
-
 linters:
   default: none
+
   enable:
     - dupl
     - errcheck
@@ -42,3 +33,25 @@ linters:
     revive:
       rules:
         - name: comment-spacings
+
+issues:
+  exclude-rules:
+    - path: api/
+      linters:
+        - lll
+    - path: internal/
+      linters:
+        - dupl
+        - lll
+    - path: _test\.go
+      linters:
+        - revive
+      text: "dot-imports"
+    - path: internal/llm/provider\.go
+      linters:
+        - revive
+      text: "stutters"
+    - path: internal/rag/engine\.go
+      linters:
+        - revive
+      text: "stutters"

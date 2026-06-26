@@ -67,11 +67,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("GET /api/v1/stats", h.apiStats)
 
 	// Health endpoints
-	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprint(w, "ok")
 	})
-	s.mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprint(w, "ok")
 	})

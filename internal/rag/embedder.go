@@ -174,7 +174,7 @@ func (e *OpenAIEmbedder) Dimensions() int { return e.dimensions }
 // provider must be "openai".
 //
 //   - For "openai": apiKey and model are used. model defaults to text-embedding-3-small.
-func NewEmbedder(provider, apiKey, model, endpoint string, logger *zap.Logger) (Embedder, error) {
+func NewEmbedder(provider, apiKey, model, _ string, logger *zap.Logger) (Embedder, error) {
 	switch provider {
 	case "openai":
 		if apiKey == "" {

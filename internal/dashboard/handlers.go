@@ -24,7 +24,7 @@ type handlers struct {
 // ─── API Handlers ─────────────────────────────────────────────────────────────
 
 // apiListIncidents returns all incidents as JSON.
-func (h *handlers) apiListIncidents(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) apiListIncidents(w http.ResponseWriter, _ *http.Request) {
 	records := h.store.List()
 	sort.Slice(records, func(i, j int) bool {
 		return records[i].LastSeen.After(records[j].LastSeen)
@@ -112,7 +112,7 @@ func (h *handlers) apiGetIncident(w http.ResponseWriter, r *http.Request) {
 }
 
 // apiStats returns platform stats.
-func (h *handlers) apiStats(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) apiStats(w http.ResponseWriter, _ *http.Request) {
 	records := h.store.List()
 	active, resolved := 0, 0
 	for _, rec := range records {
@@ -163,7 +163,7 @@ func (h *handlers) indexPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // incidentsPage renders the incidents list.
-func (h *handlers) incidentsPage(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) incidentsPage(w http.ResponseWriter, _ *http.Request) {
 	records := h.store.List()
 	sort.Slice(records, func(i, j int) bool {
 		return records[i].LastSeen.After(records[j].LastSeen)
@@ -224,7 +224,7 @@ func (h *handlers) incidentDetailPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // knowledgeBasePage renders the knowledge base page.
-func (h *handlers) knowledgeBasePage(w http.ResponseWriter, r *http.Request) {
+func (h *handlers) knowledgeBasePage(w http.ResponseWriter, _ *http.Request) {
 	stats := map[string]interface{}{}
 	if h.analyzer != nil {
 		stats = h.analyzer.Stats()
