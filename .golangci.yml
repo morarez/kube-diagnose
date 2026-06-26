@@ -34,24 +34,13 @@ linters:
       rules:
         - name: comment-spacings
 
-issues:
-  exclude-rules:
-    - path: api/
-      linters:
-        - lll
-    - path: internal/
-      linters:
-        - dupl
-        - lll
-    - path: _test\.go
-      linters:
-        - revive
-      text: "dot-imports"
-    - path: internal/llm/provider\.go
-      linters:
-        - revive
-      text: "stutters"
-    - path: internal/rag/engine\.go
-      linters:
-        - revive
-      text: "stutters"
+  exclusions:
+    rules:
+      - path: "api/*"
+        linters:
+          - lll
+
+      - path: "internal/*"
+        linters:
+          - dupl
+          - lll
