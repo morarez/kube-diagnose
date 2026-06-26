@@ -1,8 +1,8 @@
 # Kube-Diagnose: AI-Powered Kubernetes Log Intelligence Platform
 
-`kube-diagnose` is a production-ready, Kubernetes-native operator (built with Kubebuilder) that watches container logs, groups similar error patterns using SimHash, performs Retrieval-Augmented Generation (RAG) using a Qdrant vector database, and leverages cloud LLMs (OpenAI or Anthropic) to analyze root causes and generate actionable remediation recommendations.
+`kube-diagnose` is a Kubernetes-native operator (built with Kubebuilder) that watches container logs, groups similar error patterns using SimHash, performs Retrieval-Augmented Generation (RAG) using a Qdrant vector database, and leverages cloud LLMs to analyze root causes and generate actionable remediation recommendations.
 
-It includes an embedded, real-time web dashboard (powered by HTMX) and supports notification integrations like Slack.
+It includes an embedded, real-time web dashboard (powered by HTMX).
 
 ---
 

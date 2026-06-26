@@ -43,9 +43,9 @@ type AnalysisResult struct {
 	AnalysisSource string `json:"analysis_source"`
 }
 
-// LLMProvider is the minimal interface that every provider implementation must
+// Provider is the minimal interface that every provider implementation must
 // satisfy. Implementations are expected to be safe for concurrent use.
-type LLMProvider interface {
+type Provider interface {
 	// Analyze sends prompt to the provider and returns a structured result.
 	// Implementations must respect context cancellation / deadlines.
 	Analyze(ctx context.Context, prompt string) (*AnalysisResult, error)

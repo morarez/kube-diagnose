@@ -21,13 +21,14 @@ import (
 )
 
 // LLMProvider defines the AI provider configuration.
-// +kubebuilder:validation:Enum=openai;anthropic;vllm
+// +kubebuilder:validation:Enum=openai;anthropic;vllm;google
 type LLMProvider string
 
 const (
 	LLMProviderOpenAI    LLMProvider = "openai"
 	LLMProviderAnthropic LLMProvider = "anthropic"
 	LLMProviderVLLM      LLMProvider = "vllm"
+	LLMProviderGoogle    LLMProvider = "google"
 )
 
 // EmbeddingProvider defines which service to use for vector embeddings.

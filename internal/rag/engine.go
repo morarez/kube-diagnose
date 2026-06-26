@@ -1,5 +1,5 @@
 // Package rag provides Retrieval-Augmented Generation (RAG) capabilities for
-// kube-diagnose. This file implements the RAGEngine, the central orchestrator
+// kube-diagnose. This file implements the Engine, the central orchestrator
 // that ties together embedding, vector storage, and retrieval to augment LLM
 // prompts with semantically relevant context.
 package rag
@@ -17,7 +17,7 @@ import (
 // Collection names
 // -----------------------------------------------------------------------------
 
-// The RAGEngine maintains three Qdrant collections:
+// The Engine maintains three Qdrant collections:
 //   - runbooks:  indexed runbook / guide documents
 //   - incidents: resolved incident records for future retrieval
 //   - metadata:  auxiliary metadata documents (reserved for future use)
@@ -50,14 +50,14 @@ type RetrievalResult struct {
 }
 
 // -----------------------------------------------------------------------------
-// RAGEngine
+// Engine
 // -----------------------------------------------------------------------------
 
-// RAGEngine orchestrates document indexing and semantic retrieval. It embeds
+// Engine orchestrates document indexing and semantic retrieval. It embeds
 // text using the configured Embedder, stores vectors in Qdrant, and retrieves
 // the most relevant documents for a given query to be injected as context into
 // an LLM prompt.
-type RAGEngine struct {
+type Engine struct {
 	embedder            Embedder
 	qdrant              *QdrantClient
 	logger              *zap.Logger
@@ -66,12 +66,12 @@ type RAGEngine struct {
 	collectionMetadata  string
 }
 
-// NewRAGEngine constructs a RAGEngine.
+// NewEngine constructs a Engine.
 //
 // embedder is used for all Embed calls; it must not be nil.
 // qdrant is the vector store client; it must not be nil.
-func NewRAGEngine(embedder Embedder, qdrant *QdrantClient, logger *zap.Logger) *RAGEngine {
-	return &RAGEngine{
+func NewEngine(embedder Embedder, qdrant *QdrantClient, logger *zap.Logger) *Engine {
+	return &Engine{
 		embedder:            embedder,
 		qdrant:              qdrant,
 		logger:              logger.With(zap.String("component", "rag_engine")),
@@ -88,7 +88,7 @@ func NewRAGEngine(embedder Embedder, qdrant *QdrantClient, logger *zap.Logger) *
 // Initialize ensures that all three Qdrant collections exist with the correct
 // vector dimensionality. It must be called once before IndexDocuments or
 // Retrieve. It is idempotent — repeated calls are safe.
-func (e *RAGEngine) Initialize(ctx context.Context, dimensions int) error {
+func (e *Engine) Initialize(ctx context.Context, dimensions int) error {
 	if dimensions <= 0 {
 		dimensions = e.embedder.Dimensions()
 	}
@@ -123,7 +123,7 @@ func (e *RAGEngine) Initialize(ctx context.Context, dimensions int) error {
 // A per-document embedding failure does not abort the entire operation; the
 // document is skipped and the error is logged. The caller receives an error only
 // if all documents fail.
-func (e *RAGEngine) IndexDocuments(ctx context.Context, docs []Document) error {
+func (e *Engine) IndexDocuments(ctx context.Context, docs []Document) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -209,7 +209,7 @@ func (e *RAGEngine) IndexDocuments(ctx context.Context, docs []Document) error {
 //
 // fingerprint is the alert fingerprint; pattern is a textual description of the
 // failure pattern; rootCause and resolution are the post-incident findings.
-func (e *RAGEngine) IndexResolvedIncident(
+func (e *Engine) IndexResolvedIncident(
 	ctx context.Context,
 	fingerprint, pattern, rootCause, resolution, namespace string,
 ) error {
@@ -272,7 +272,7 @@ func buildIncidentText(pattern, rootCause, resolution, namespace string) string 
 // is already normalised to [0.0, 1.0] for cosine-distance collections.
 //
 // If topK ≤ 0 it defaults to 5.
-func (e *RAGEngine) Retrieve(ctx context.Context, query string, topK int) ([]RetrievalResult, float64, error) {
+func (e *Engine) Retrieve(ctx context.Context, query string, topK int) ([]RetrievalResult, float64, error) {
 	if topK <= 0 {
 		topK = 5
 	}
@@ -431,7 +431,7 @@ func documentFromPayload(payload map[string]interface{}) Document {
 //
 // The output is formatted as a numbered list where each entry includes its
 // source category, score, title, and content.
-func (e *RAGEngine) FormatContext(results []RetrievalResult) string {
+func (e *Engine) FormatContext(results []RetrievalResult) string {
 	if len(results) == 0 {
 		return ""
 	}
@@ -439,7 +439,8 @@ func (e *RAGEngine) FormatContext(results []RetrievalResult) string {
 	var sb strings.Builder
 
 	sb.WriteString("## Retrieved Context\n\n")
-	sb.WriteString("The following documents were retrieved from the knowledge base based on semantic similarity to your query:\n\n")
+	sb.WriteString("The following documents were retrieved from the knowledge base " +
+		"based on semantic similarity to your query:\n\n")
 
 	for i, r := range results {
 		sb.WriteString(fmt.Sprintf("### [%d] %s\n", i+1, r.Document.Title))

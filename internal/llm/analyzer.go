@@ -94,7 +94,7 @@ func (c *AnalysisCache) Purge() {
 //  4. Try each configured LLM provider in order; return on first success.
 //  5. Cache and return the result.
 type Analyzer struct {
-	providers                      []LLMProvider
+	providers                      []Provider
 	cache                          *AnalysisCache
 	ragConfidenceThreshold         float64
 	criticalRAGConfidenceThreshold float64
@@ -121,7 +121,7 @@ type Analyzer struct {
 //   - cacheTTL    – how long to cache LLM results per fingerprint
 //   - logger      – structured logger
 func NewAnalyzer(
-	providers []LLMProvider,
+	providers []Provider,
 	ragThreshold, criticalThreshold float64,
 	maxCallsPerHour int,
 	cacheTTL time.Duration,

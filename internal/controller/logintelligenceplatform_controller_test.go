@@ -19,8 +19,8 @@ package controller
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,8 +31,8 @@ import (
 	diagnosev1alpha1 "github.com/morarez/kube-diagnose/api/v1alpha1"
 )
 
-var _ = Describe("LogIntelligencePlatform Controller", func() {
-	Context("When reconciling a resource", func() {
+var _ = ginkgo.Describe("LogIntelligencePlatform Controller", func() {
+	ginkgo.Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
 		ctx := context.Background()
@@ -43,8 +43,8 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 		}
 		logintelligenceplatform := &diagnosev1alpha1.LogIntelligencePlatform{}
 
-		BeforeEach(func() {
-			By("creating the mock Secret containing OpenAI API key")
+		ginkgo.BeforeEach(func() {
+			ginkgo.By("creating the mock Secret containing OpenAI API key")
 			secret := &corev1.Secret{}
 			secretName := types.NamespacedName{
 				Name:      "test-secret",
@@ -61,10 +61,10 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 						"openai-key": []byte("dummy-key"),
 					},
 				}
-				Expect(k8sClient.Create(ctx, secretObj)).To(Succeed())
+				gomega.Expect(k8sClient.Create(ctx, secretObj)).To(gomega.Succeed())
 			}
 
-			By("creating the custom resource for the Kind LogIntelligencePlatform")
+			ginkgo.By("creating the custom resource for the Kind LogIntelligencePlatform")
 			err = k8sClient.Get(ctx, typeNamespacedName, logintelligenceplatform)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &diagnosev1alpha1.LogIntelligencePlatform{
@@ -83,19 +83,19 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 						},
 					},
 				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				gomega.Expect(k8sClient.Create(ctx, resource)).To(gomega.Succeed())
 			}
 		})
 
-		AfterEach(func() {
+		ginkgo.AfterEach(func() {
 			resource := &diagnosev1alpha1.LogIntelligencePlatform{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			By("Cleanup the specific resource instance LogIntelligencePlatform")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			ginkgo.By("Cleanup the specific resource instance LogIntelligencePlatform")
+			gomega.Expect(k8sClient.Delete(ctx, resource)).To(gomega.Succeed())
 
-			By("Cleanup the mock Secret")
+			ginkgo.By("Cleanup the mock Secret")
 			secret := &corev1.Secret{}
 			secretName := types.NamespacedName{
 				Name:      "test-secret",
@@ -103,11 +103,11 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 			}
 			err = k8sClient.Get(ctx, secretName, secret)
 			if err == nil {
-				Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
+				gomega.Expect(k8sClient.Delete(ctx, secret)).To(gomega.Succeed())
 			}
 		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
+		ginkgo.It("should successfully reconcile the resource", func() {
+			ginkgo.By("Reconciling the created resource")
 			controllerReconciler := &LogIntelligencePlatformReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
@@ -116,7 +116,7 @@ var _ = Describe("LogIntelligencePlatform Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
-			Expect(err).NotTo(HaveOccurred())
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})

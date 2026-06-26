@@ -287,33 +287,107 @@ const baseCSS = `
     --critical: #f85149; --high: #d29922; --medium: #3fb950; --low: #58a6ff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+  }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 2rem; height: 56px; }
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 56px;
+  }
   nav .brand { font-size: 1.1rem; font-weight: 700; color: var(--text); }
   nav .brand span { color: var(--accent); }
   nav a { color: var(--muted); font-size: 0.9rem; }
   nav a:hover { color: var(--text); }
   .container { max-width: 1280px; margin: 0 auto; padding: 2rem; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
-  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; text-align: center; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    text-align: center;
+  }
   .stat .value { font-size: 2.5rem; font-weight: 700; color: var(--accent); }
-  .stat .label { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat .label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
   table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+  th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
   td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.875rem; vertical-align: middle; }
   tr:hover td { background: rgba(88,166,255,0.05); }
-  .badge { display: inline-block; padding: 0.2em 0.6em; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
   .severity-critical { background: rgba(248,81,73,0.2); color: var(--critical); }
   .severity-high { background: rgba(210,153,34,0.2); color: var(--high); }
   .severity-medium { background: rgba(63,185,80,0.2); color: var(--medium); }
   .severity-low { background: rgba(88,166,255,0.2); color: var(--low); }
   .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
-  .mono { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; background: var(--bg); padding: 0.2em 0.5em; border-radius: 4px; }
-  pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow: auto; font-size: 0.8rem; max-height: 300px; }
-  .tag { display: inline-block; background: rgba(88,166,255,0.1); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); border-radius: 4px; padding: 0.15em 0.5em; font-size: 0.75rem; margin: 0.15rem; }
+  .mono {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 0.8rem;
+    background: var(--bg);
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow: auto;
+    font-size: 0.8rem;
+    max-height: 300px;
+  }
+  .tag {
+    display: inline-block;
+    background: rgba(88,166,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(88,166,255,0.3);
+    border-radius: 4px;
+    padding: 0.15em 0.5em;
+    font-size: 0.75rem;
+    margin: 0.15rem;
+  }
 </style>`
 
 const navHTML = `
@@ -336,7 +410,10 @@ const indexHTML = `<!DOCTYPE html>
   <h1 class="page-title">Platform Overview</h1>
   <div class="stat-grid">
     <div class="stat"><div class="value">{{.ActiveIncidents}}</div><div class="label">Active Incidents</div></div>
-    <div class="stat"><div class="value" style="color:var(--critical)">{{.CriticalIncidents}}</div><div class="label">Critical</div></div>
+    <div class="stat">
+      <div class="value" style="color:var(--critical)">{{.CriticalIncidents}}</div>
+      <div class="label">Critical</div>
+    </div>
     <div class="stat"><div class="value">{{.TotalIncidents}}</div><div class="label">Total Incidents</div></div>
   </div>
   <div class="card">
@@ -364,7 +441,9 @@ const incidentsHTML = `<!DOCTYPE html>
 <body>` + navHTML + `
 <div class="container">
   <h1 class="page-title">Incidents</h1>
-  {{if not .Incidents}}<div class="card" style="text-align:center;color:var(--muted)">No incidents detected yet.</div>{{end}}
+  {{if not .Incidents}}
+    <div class="card" style="text-align:center;color:var(--muted)">No incidents detected yet.</div>
+  {{end}}
   {{if .Incidents}}
   <div class="card" style="padding:0;overflow:hidden">
   <table>
@@ -381,7 +460,13 @@ const incidentsHTML = `<!DOCTYPE html>
       <td>{{.Count}}</td>
       <td>{{.AffectedPods}}</td>
       <td><span class="mono">{{.LastSeen}}</span></td>
-      <td>{{if .Resolved}}<span style="color:var(--medium)">✓ Resolved</span>{{else}}<span style="color:var(--critical)">● Active</span>{{end}}</td>
+      <td>
+        {{if .Resolved}}
+          <span style="color:var(--medium)">✓ Resolved</span>
+        {{else}}
+          <span style="color:var(--critical)">● Active</span>
+        {{end}}
+      </td>
     </tr>
     {{end}}
     </tbody>
@@ -411,7 +496,10 @@ const incidentDetailHTML = `<!DOCTYPE html>
     <div class="card">
       <h2 style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem">INCIDENT METADATA</h2>
       <table><tbody>
-        <tr><td style="color:var(--muted);width:40%">Fingerprint</td><td><span class="mono">{{.Record.Fingerprint}}</span></td></tr>
+        <tr>
+          <td style="color:var(--muted);width:40%">Fingerprint</td>
+          <td><span class="mono">{{.Record.Fingerprint}}</span></td>
+        </tr>
         <tr><td style="color:var(--muted)">Namespace</td><td><span class="tag">{{.Record.Namespace}}</span></td></tr>
         <tr><td style="color:var(--muted)">Policy</td><td>{{.Record.PolicyName}}</td></tr>
         <tr><td style="color:var(--muted)">Occurrences</td><td>{{.Record.Count}}</td></tr>
@@ -431,7 +519,9 @@ const incidentDetailHTML = `<!DOCTYPE html>
     <h2 style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem">
       AI ANALYSIS
       <span class="badge severity-low" style="margin-left:0.5rem">{{.Record.Analysis.AnalysisSource}}</span>
-      <span style="float:right;color:var(--muted)">Confidence: {{printf "%.0f" (mul .Record.Analysis.Confidence 100)}}%</span>
+      <span style="float:right;color:var(--muted)">
+        Confidence: {{printf "%.0f" (mul .Record.Analysis.Confidence 100)}}%
+      </span>
     </h2>
     <p style="margin-bottom:1rem"><strong>Root Cause:</strong> {{.Record.Analysis.RootCause}}</p>
     <p style="margin-bottom:1rem"><strong>Impact:</strong> {{.Record.Analysis.Impact}}</p>
@@ -473,7 +563,8 @@ const knowledgeBaseHTML = `<!DOCTYPE html>
     <h2 style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem">KNOWLEDGE BASE COLLECTIONS</h2>
     <p style="font-size:0.875rem;color:var(--muted)">Documents are indexed in Qdrant across three collections:
     <strong>runbooks</strong>, <strong>incidents</strong> (resolved), and <strong>metadata</strong>.
-    Add Markdown runbooks to <code>/etc/kube-diagnose/runbooks/</code> or configure a ConfigMap reference in your LogIntelligencePlatform CR.</p>
+    Add Markdown runbooks to <code>/etc/kube-diagnose/runbooks/</code> or
+    configure a ConfigMap reference in your LogIntelligencePlatform CR.</p>
   </div>
 </div>
 </body></html>`

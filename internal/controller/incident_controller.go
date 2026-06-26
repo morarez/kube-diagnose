@@ -95,7 +95,7 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				resolution = strings.Join(actions, "; ")
 			}
 
-			if err := platformComponents.RAGEngine.IndexResolvedIncident(
+			if err := platformComponents.Engine.IndexResolvedIncident(
 				indexCtx,
 				incident.Status.Fingerprint,
 				incident.Status.Pattern,

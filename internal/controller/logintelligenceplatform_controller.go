@@ -51,7 +51,7 @@ type PlatformComponents struct {
 	Watcher         *logwatcher.Watcher
 	IncidentStore   *aggregator.IncidentStore
 	PatternDetector *aggregator.PatternDetector
-	RAGEngine       *rag.RAGEngine
+	Engine          *rag.Engine
 	Analyzer        *llm.Analyzer
 	Dashboard       *dashboard.Server
 	LogCh           chan *logwatcher.LogEntry
@@ -60,8 +60,8 @@ type PlatformComponents struct {
 }
 
 // LogIntelligencePlatformReconciler reconciles a LogIntelligencePlatform object.
-//
-// +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logintelligenceplatforms,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logintelligenceplatforms,verbs=get;list;watch
+// +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logintelligenceplatforms,verbs=create;update;patch;delete
 // +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logintelligenceplatforms/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logintelligenceplatforms/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
@@ -172,7 +172,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	qdrantClient := rag.NewQdrantClient(qdrantHost, qdrantHTTPPort, qdrantAPIKey, qdrantCollectionPrefix, logger)
 
 	// ── RAG Engine ────────────────────────────────────────────────────────────
-	ragEngine := rag.NewRAGEngine(embedder, qdrantClient, logger)
+	ragEngine := rag.NewEngine(embedder, qdrantClient, logger)
 	if err := ragEngine.Initialize(childCtx, 0); err != nil {
 		logger.Warn("RAG engine initialization failed (Qdrant may not be ready); continuing", zap.Error(err))
 	}
@@ -181,7 +181,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	go r.indexKnowledgeBase(childCtx, platform, ragEngine, logger)
 
 	// ── LLM Providers ─────────────────────────────────────────────────────────
-	var providers []llm.LLMProvider
+	var providers []llm.Provider
 	if spec.LLM != nil {
 		provider, err := r.buildLLMProvider(ctx, platform.Namespace, spec.LLM, logger)
 		if err != nil {
@@ -243,7 +243,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 		Watcher:         watcher,
 		IncidentStore:   incidentStore,
 		PatternDetector: patternDetector,
-		RAGEngine:       ragEngine,
+		Engine:          ragEngine,
 		Analyzer:        analyzer,
 		Dashboard:       dash,
 		LogCh:           logCh,
@@ -266,7 +266,7 @@ func (r *LogIntelligencePlatformReconciler) runLogPipeline(
 	logCh <-chan *logwatcher.LogEntry,
 	store *aggregator.IncidentStore,
 	detector *aggregator.PatternDetector,
-	ragEngine *rag.RAGEngine,
+	ragEngine *rag.Engine,
 	analyzer *llm.Analyzer,
 	logger *zap.Logger,
 ) {
@@ -348,7 +348,7 @@ func (r *LogIntelligencePlatformReconciler) runLogPipeline(
 func (r *LogIntelligencePlatformReconciler) indexKnowledgeBase(
 	ctx context.Context,
 	platform *diagnosev1alpha1.LogIntelligencePlatform,
-	ragEngine *rag.RAGEngine,
+	ragEngine *rag.Engine,
 	logger *zap.Logger,
 ) {
 	runbooksPath := "/etc/kube-diagnose/runbooks"
@@ -381,7 +381,7 @@ func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
 	namespace string,
 	cfg *diagnosev1alpha1.LLMConfig,
 	logger *zap.Logger,
-) (llm.LLMProvider, error) {
+) (llm.Provider, error) {
 	apiKey := ""
 	if cfg.APIKeySecretRef != nil {
 		key, err := r.resolveSecretKey(ctx, namespace, cfg.APIKeySecretRef)
@@ -414,6 +414,14 @@ func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
 			endpoint = "http://vllm:8000"
 		}
 		return llm.NewOpenAIProviderWithEndpoint(apiKey, model, endpoint, maxTokens, logger), nil
+	case diagnosev1alpha1.LLMProviderGoogle:
+		if model == "" {
+			model = "gemini-1.5-flash"
+		}
+		if apiKey == "" {
+			return nil, fmt.Errorf("google gemini provider requires a non-empty apiKey")
+		}
+		return llm.NewGoogleProvider(apiKey, model, maxTokens, logger), nil
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)
 	}

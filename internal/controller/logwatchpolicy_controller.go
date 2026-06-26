@@ -35,7 +35,8 @@ import (
 
 // LogWatchPolicyReconciler reconciles a LogWatchPolicy object.
 //
-// +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logwatchpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logwatchpolicies,verbs=get;list;watch
+// +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logwatchpolicies,verbs=create;update;patch;delete
 // +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logwatchpolicies/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=diagnose.diagnose.k8s.io,resources=logwatchpolicies/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch

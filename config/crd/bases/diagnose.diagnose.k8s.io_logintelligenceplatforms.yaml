@@ -191,6 +191,7 @@ spec:
                     - openai
                     - anthropic
                     - vllm
+                    - google
                     type: string
                   temperature:
                     description: Temperature for LLM sampling.

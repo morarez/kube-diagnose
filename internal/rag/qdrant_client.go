@@ -306,9 +306,12 @@ func (c *QdrantClient) Upsert(ctx context.Context, collection string, points []Q
 	return nil
 }
 
-// Search queries the given collection for the nearest neighbours of vector,
-// returning at most limit results. The collection name is prefixed automatically.
-func (c *QdrantClient) Search(ctx context.Context, collection string, vector []float32, limit int) ([]SearchResult, error) {
+func (c *QdrantClient) Search(
+	ctx context.Context,
+	collection string,
+	vector []float32,
+	limit int,
+) ([]SearchResult, error) {
 	fullName := c.prefixedCollection(collection)
 	url := fmt.Sprintf("%s/collections/%s/points/search", c.baseURL(), fullName)
 

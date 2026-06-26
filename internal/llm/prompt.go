@@ -9,7 +9,8 @@ import (
 // systemPrompt is the fixed system-level instruction sent to every provider.
 // It establishes the assistant's persona, constrains output to valid JSON, and
 // includes a few-shot example so the model understands the expected schema.
-const systemPrompt = `You are an expert Site Reliability Engineer (SRE) specialising in Kubernetes operations and incident management.
+const systemPrompt = `You are an expert Site Reliability Engineer (SRE) specialising in ` +
+	`Kubernetes operations and incident management.
 Your task is to analyse the incident details provided by the user and produce a structured diagnosis.
 
 CRITICAL RULES:
@@ -32,12 +33,17 @@ User input:
 
 Expected JSON response:
 {
-  "root_cause": "The api-server pods are exceeding their 1 Gi memory limit and being OOMKilled by the kernel. The Java heap is growing beyond the configured limit, likely due to a memory leak or insufficient heap sizing for the current request volume.",
+  "root_cause": "The api-server pods are exceeding their 1 Gi memory limit and ` +
+	`being OOMKilled by the kernel. The Java heap is growing beyond the configured ` +
+	`limit, likely due to a memory leak or insufficient heap sizing for the current ` +
+	`request volume.",
   "confidence": 0.88,
-  "impact": "API requests are failing intermittently as pods restart. End-users may experience 502 errors or elevated latency.",
+  "impact": "API requests are failing intermittently as pods restart. ` +
+	`End-users may experience 502 errors or elevated latency.",
   "severity": "high",
   "recommended_actions": [
-    "Increase the memory limit to 2 Gi as an immediate mitigation: kubectl set resources deployment/api-server --limits=memory=2Gi -n production",
+    "Increase the memory limit to 2 Gi as an immediate mitigation: ` +
+	`kubectl set resources deployment/api-server --limits=memory=2Gi -n production",
     "Add JVM flags to cap heap: -Xmx800m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heapdump.hprof",
     "Enable JVM GC logging and inspect heap dump for leak candidates",
     "Review recent code changes for unbounded caching or collection growth",
