@@ -1,135 +1,130 @@
-# kube-diagnose
-// TODO(user): Add simple overview of use/purpose
+# Kube-Diagnose: AI-Powered Kubernetes Log Intelligence Platform
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+`kube-diagnose` is a production-ready, Kubernetes-native operator (built with Kubebuilder) that watches container logs, groups similar error patterns using SimHash, performs Retrieval-Augmented Generation (RAG) using a Qdrant vector database, and leverages cloud LLMs (OpenAI or Anthropic) to analyze root causes and generate actionable remediation recommendations.
+
+It includes an embedded, real-time web dashboard (powered by HTMX) and supports notification integrations like Slack.
+
+---
+
+## Features
+
+*   **Zero Sidecars Required**: Streams logs directly from the Kubernetes API (`pods/log` streaming) with automatic reconnection and lifecycle management.
+*   **Intelligent Log Grouping (SimHash)**: Normalizes raw logs (strips IPs, UUIDs, timestamps, and numbers) and computes a 64-bit SimHash. Merges new logs into existing `Incident` custom resources if the Hamming distance is $\le 3$ to prevent alert fatigue.
+*   **RAG-First Cost Minimization**: Queries a Qdrant vector database seeded with your team's runbooks, guides, and past resolutions first. If a matched resolution has high confidence ($\ge 0.75$), it resolves the incident locally, bypassing cloud LLM APIs.
+*   **Multi-Provider LLM Integration**: Route requests dynamically across OpenAI (`gpt-4o-mini`) or Anthropic (`claude-3-5-haiku-latest`).
+*   **Built-in Real-Time Dashboard**: Serve a responsive, dark-themed dashboard directly from the operator process showing active incidents, pattern frequencies, and knowledge-base status.
+*   **GitOps-Friendly Configuration**: Fully configured using Kubernetes Custom Resource Definitions (CRDs).
+
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-- go version v1.23.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+*   Go v1.24+
+*   Docker
+*   A local Kubernetes cluster (e.g. Minikube, Kind, or Rancher Desktop)
+*   `kubectl` installed and configured
+*   OpenAI or Anthropic API Keys
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+---
 
-```sh
-make docker-build docker-push IMG=<some-registry>/kube-diagnose:tag
+### Local Development Setup
+
+1.  **Spin up the Dev Stack**:
+    Start the local Qdrant vector database:
+    ```bash
+    docker-compose -f deploy/docker-compose.yaml up -d
+    ```
+    This automatically downloads and runs **Qdrant** on port `:6333`.
+
+2.  **Generate and Install CRDs**:
+    Generate CRD manifests and install them into your cluster:
+    ```bash
+    make install
+    ```
+
+3.  **Run the Operator Locally**:
+    Start the operator process on your machine, bound to your current active kubeconfig context:
+    ```bash
+    make run
+    ```
+    *Note: The built-in dashboard will be served at `http://localhost:8080`.*
+
+---
+
+## Configuration Examples
+
+Cloud-based providers require an API key stored in a Kubernetes Secret:
+
+### Step 1: Create a Secret with API Keys
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: platform-credentials
+  namespace: default
+type: Opaque
+stringData:
+  openai-key: sk-proj-yourActualOpenAIApiKey...
+  anthropic-key: sk-ant-sid01-yourActualAnthropicApiKey...
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:**
-
-```sh
-make install
+### Step 2: Apply the Platform Config (`LogIntelligencePlatform`)
+```yaml
+apiVersion: diagnose.diagnose.k8s.io/v1alpha1
+kind: LogIntelligencePlatform
+metadata:
+  name: platform-config
+spec:
+  dashboardEnabled: true
+  dashboardPort: 8080
+  embedding:
+    provider: openai
+    model: text-embedding-3-small
+    apiKeySecretRef:
+      name: platform-credentials
+      key: openai-key
+  qdrant:
+    host: localhost
+    httpPort: 6333
+    collectionPrefix: dev-kube-diagnose
+  llm:
+    provider: openai
+    model: gpt-4o-mini
+    apiKeySecretRef:
+      name: platform-credentials
+      key: openai-key
+  analysis:
+    ragConfidenceThreshold: "0.75"
+    criticalRAGConfidenceThreshold: "0.90"
+    maxLLMCallsPerHour: 100
+    llmCacheTTL: 24h
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+---
 
-```sh
-make deploy IMG=<some-registry>/kube-diagnose:tag
+## 🧪 Verification & Commands
+
+### Run Unit Tests
+Bootstraps a mock Kubernetes control plane (via `envtest`), installs CRDs, and verifies all controller reconciliation flows:
+```bash
+make test
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
+### Run Linter
+Validates code style, formatting, static analysis, and syntax correctness:
+```bash
+make lint
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
+### Build Binary
+Builds the operator manager binary into `bin/manager`:
+```bash
+make build
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
-
-```sh
-make uninstall
-```
-
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
-## Project Distribution
-
-Following the options to release and provide this solution to the users.
-
-### By providing a bundle with all YAML files
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/kube-diagnose:tag
-```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/kube-diagnose/<tag or branch>/dist/install.yaml
-```
-
-### By providing a Helm Chart
-
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+---
 
 ## License
-
-Copyright 2026.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
