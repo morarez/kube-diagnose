@@ -11,7 +11,6 @@ It includes an embedded, real-time web dashboard (powered by HTMX).
 *   **Zero Sidecars Required**: Streams logs directly from the Kubernetes API (`pods/log` streaming) with automatic reconnection and lifecycle management.
 *   **Intelligent Log Grouping (SimHash)**: Normalizes raw logs (strips IPs, UUIDs, timestamps, and numbers) and computes a 64-bit SimHash. Merges new logs into existing `Incident` custom resources if the Hamming distance is $\le 3$ to prevent alert fatigue.
 *   **RAG-First Cost Minimization**: Queries a Qdrant vector database seeded with your team's runbooks, guides, and past resolutions first. If a matched resolution has high confidence ($\ge 0.75$), it resolves the incident locally, bypassing cloud LLM APIs.
-*   **Multi-Provider LLM Integration**: Route requests dynamically across OpenAI (`gpt-4o-mini`) or Anthropic (`claude-3-5-haiku-latest`).
 *   **Built-in Real-Time Dashboard**: Serve a responsive, dark-themed dashboard directly from the operator process showing active incidents, pattern frequencies, and knowledge-base status.
 *   **GitOps-Friendly Configuration**: Fully configured using Kubernetes Custom Resource Definitions (CRDs).
 
