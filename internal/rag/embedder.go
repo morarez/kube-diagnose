@@ -4,8 +4,11 @@
 package rag
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	openai "github.com/sashabaranov/go-openai"
@@ -169,11 +172,127 @@ func (e *OpenAIEmbedder) Dimensions() int { return e.dimensions }
 // Factory
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
+// GoogleEmbedder
+// -----------------------------------------------------------------------------
+
+type googleEmbedRequest struct {
+	Content googleEmbedContent `json:"content"`
+}
+
+type googleEmbedContent struct {
+	Parts []googleEmbedPart `json:"parts"`
+}
+
+type googleEmbedPart struct {
+	Text string `json:"text"`
+}
+
+type googleEmbedResponse struct {
+	Embedding googleEmbedding `json:"embedding"`
+}
+
+type googleEmbedding struct {
+	Values []float32 `json:"values"`
+}
+
+// GoogleEmbedder wraps the Google Gemini embeddings API.
+type GoogleEmbedder struct {
+	apiKey     string
+	model      string
+	dimensions int
+	httpClient *http.Client
+	logger     *zap.Logger
+}
+
+// NewGoogleEmbedder constructs a GoogleEmbedder.
+// If model is empty the default model (gemini-embedding-001) is used.
+func NewGoogleEmbedder(apiKey, model string, logger *zap.Logger) *GoogleEmbedder {
+	if model == "" {
+		model = "gemini-embedding-001"
+	}
+	return &GoogleEmbedder{
+		apiKey:     apiKey,
+		model:      model,
+		dimensions: 768, // gemini-embedding-001 has 768 dimensions by default
+		httpClient: &http.Client{Timeout: 30 * time.Second},
+		logger:     logger.With(zap.String("embedder", "google"), zap.String("model", model)),
+	}
+}
+
+// Embed returns the vector embedding for text using the Google Gemini API.
+func (e *GoogleEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
+	var result []float32
+
+	reqPayload := googleEmbedRequest{
+		Content: googleEmbedContent{
+			Parts: []googleEmbedPart{
+				{Text: text},
+			},
+		},
+	}
+
+	url := fmt.Sprintf(
+		"https://generativelanguage.googleapis.com/v1beta/models/%s:embedContent?key=%s",
+		e.model,
+		e.apiKey,
+	)
+
+	bodyBytes, err := json.Marshal(reqPayload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal google embed request: %w", err)
+	}
+
+	err = withRetry(ctx, e.logger, "google.Embed", func() error {
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return fmt.Errorf("create google embed request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := e.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("google embed api call: %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("google embed api returned status %d", resp.StatusCode)
+		}
+
+		var embedResp googleEmbedResponse
+		if err := json.NewDecoder(resp.Body).Decode(&embedResp); err != nil {
+			return fmt.Errorf("decode google embed response: %w", err)
+		}
+
+		result = embedResp.Embedding.Values
+		if len(result) == 0 {
+			return fmt.Errorf("google returned empty embedding values")
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	e.logger.Debug("embedded text via Google Gemini",
+		zap.Int("textLen", len(text)),
+		zap.Int("dims", len(result)),
+	)
+	return result, nil
+}
+
+// Dimensions returns the number of dimensions in the embedding vectors.
+func (e *GoogleEmbedder) Dimensions() int { return e.dimensions }
+
+// -----------------------------------------------------------------------------
+// Factory
+// -----------------------------------------------------------------------------
+
 // NewEmbedder constructs an Embedder based on the given provider name.
 //
-// provider must be "openai".
-//
-//   - For "openai": apiKey and model are used. model defaults to text-embedding-3-small.
+// provider must be "openai" or "google".
 func NewEmbedder(provider, apiKey, model, _ string, logger *zap.Logger) (Embedder, error) {
 	switch provider {
 	case "openai":
@@ -181,9 +300,14 @@ func NewEmbedder(provider, apiKey, model, _ string, logger *zap.Logger) (Embedde
 			return nil, fmt.Errorf("openai embedder requires a non-empty apiKey")
 		}
 		return NewOpenAIEmbedder(apiKey, model, logger), nil
+	case "google":
+		if apiKey == "" {
+			return nil, fmt.Errorf("google embedder requires a non-empty apiKey")
+		}
+		return NewGoogleEmbedder(apiKey, model, logger), nil
 
 	default:
-		return nil, fmt.Errorf("unsupported embedder provider %q: must be one of [openai]", provider)
+		return nil, fmt.Errorf("unsupported embedder provider %q: must be one of [openai, google]", provider)
 	}
 }
 

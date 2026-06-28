@@ -32,11 +32,12 @@ const (
 )
 
 // EmbeddingProvider defines which service to use for vector embeddings.
-// +kubebuilder:validation:Enum=openai
+// +kubebuilder:validation:Enum=openai;google
 type EmbeddingProvider string
 
 const (
 	EmbeddingProviderOpenAI EmbeddingProvider = "openai"
+	EmbeddingProviderGoogle EmbeddingProvider = "google"
 )
 
 // SecretKeyRef references a Kubernetes secret key.

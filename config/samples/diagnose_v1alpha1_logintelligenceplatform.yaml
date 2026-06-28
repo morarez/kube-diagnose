@@ -6,4 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: logintelligenceplatform-sample
 spec:
-  # TODO(user): Add fields here
+  llm:
+    provider: google
+    model: gemini-3.5-flash
+    apiKeySecretRef:
+      name: gemini-secret
+      key: api-key

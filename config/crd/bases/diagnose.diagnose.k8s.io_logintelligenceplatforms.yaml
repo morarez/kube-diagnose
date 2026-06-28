@@ -120,6 +120,7 @@ spec:
                     description: Provider is the embedding provider.
                     enum:
                     - openai
+                    - google
                     type: string
                 required:
                 - provider

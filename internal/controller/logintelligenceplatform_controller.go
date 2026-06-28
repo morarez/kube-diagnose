@@ -118,58 +118,30 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 
 	spec := platform.Spec
 
-	// ── Embedder ──────────────────────────────────────────────────────────────
-	embeddingProvider := "openai"
-	embeddingModel := "text-embedding-3-small"
-	embeddingEndpoint := ""
-	embeddingAPIKey := ""
-	if spec.Embedding != nil {
-		embeddingProvider = string(spec.Embedding.Provider)
-		if spec.Embedding.Model != "" {
-			embeddingModel = spec.Embedding.Model
+	// ── LLM API Key (potentially reused for Embeddings) ───────────────────────
+	llmAPIKey := ""
+	if spec.LLM != nil && spec.LLM.APIKeySecretRef != nil {
+		key, err := r.resolveSecretKey(ctx, platform.Namespace, spec.LLM.APIKeySecretRef)
+		if err != nil {
+			cancel()
+			return fmt.Errorf("resolve LLM API key: %w", err)
 		}
-		embeddingEndpoint = spec.Embedding.Endpoint
-		if spec.Embedding.APIKeySecretRef != nil {
-			key, err := r.resolveSecretKey(ctx, platform.Namespace, spec.Embedding.APIKeySecretRef)
-			if err != nil {
-				cancel()
-				return fmt.Errorf("resolve embedding API key: %w", err)
-			}
-			embeddingAPIKey = key
-		}
+		llmAPIKey = key
 	}
 
-	embedder, err := rag.NewEmbedder(embeddingProvider, embeddingAPIKey, embeddingModel, embeddingEndpoint, logger)
+	// ── Embedder ──────────────────────────────────────────────────────────────
+	embedder, err := r.buildEmbedder(ctx, platform, llmAPIKey, logger)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("create embedder: %w", err)
 	}
 
 	// ── Qdrant ────────────────────────────────────────────────────────────────
-	qdrantHost := "qdrant"
-	qdrantHTTPPort := 6333
-	qdrantAPIKey := ""
-	qdrantCollectionPrefix := "kube-diagnose"
-	if spec.Qdrant != nil {
-		if spec.Qdrant.Host != "" {
-			qdrantHost = spec.Qdrant.Host
-		}
-		if spec.Qdrant.HTTPPort > 0 {
-			qdrantHTTPPort = spec.Qdrant.HTTPPort
-		}
-		if spec.Qdrant.CollectionPrefix != "" {
-			qdrantCollectionPrefix = spec.Qdrant.CollectionPrefix
-		}
-		if spec.Qdrant.APIKeySecretRef != nil {
-			key, err := r.resolveSecretKey(ctx, platform.Namespace, spec.Qdrant.APIKeySecretRef)
-			if err != nil {
-				cancel()
-				return fmt.Errorf("resolve Qdrant API key: %w", err)
-			}
-			qdrantAPIKey = key
-		}
+	qdrantClient, err := r.buildQdrantClient(ctx, platform, logger)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("create qdrant client: %w", err)
 	}
-	qdrantClient := rag.NewQdrantClient(qdrantHost, qdrantHTTPPort, qdrantAPIKey, qdrantCollectionPrefix, logger)
 
 	// ── RAG Engine ────────────────────────────────────────────────────────────
 	ragEngine := rag.NewEngine(embedder, qdrantClient, logger)
@@ -183,7 +155,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	// ── LLM Providers ─────────────────────────────────────────────────────────
 	var providers []llm.Provider
 	if spec.LLM != nil {
-		provider, err := r.buildLLMProvider(ctx, platform.Namespace, spec.LLM, logger)
+		provider, err := r.buildLLMProvider(spec.LLM, llmAPIKey, logger)
 		if err != nil {
 			logger.Warn("failed to build LLM provider; AI analysis will use RAG only", zap.Error(err))
 		} else {
@@ -377,20 +349,10 @@ func (r *LogIntelligencePlatformReconciler) indexKnowledgeBase(
 
 // buildLLMProvider constructs the appropriate LLM provider from the spec.
 func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
-	ctx context.Context,
-	namespace string,
 	cfg *diagnosev1alpha1.LLMConfig,
+	apiKey string,
 	logger *zap.Logger,
 ) (llm.Provider, error) {
-	apiKey := ""
-	if cfg.APIKeySecretRef != nil {
-		key, err := r.resolveSecretKey(ctx, namespace, cfg.APIKeySecretRef)
-		if err != nil {
-			return nil, fmt.Errorf("resolve LLM API key: %w", err)
-		}
-		apiKey = key
-	}
-
 	maxTokens := cfg.MaxTokens
 	if maxTokens <= 0 {
 		maxTokens = 2048
@@ -416,7 +378,7 @@ func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
 		return llm.NewOpenAIProviderWithEndpoint(apiKey, model, endpoint, maxTokens, logger), nil
 	case diagnosev1alpha1.LLMProviderGoogle:
 		if model == "" {
-			model = "gemini-1.5-flash"
+			model = "gemini-3.5-flash"
 		}
 		if apiKey == "" {
 			return nil, fmt.Errorf("google gemini provider requires a non-empty apiKey")
@@ -425,6 +387,83 @@ func (r *LogIntelligencePlatformReconciler) buildLLMProvider(
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %s", cfg.Provider)
 	}
+}
+
+// buildEmbedder constructs the Embedder client based on the platform specification.
+func (r *LogIntelligencePlatformReconciler) buildEmbedder(
+	ctx context.Context,
+	platform *diagnosev1alpha1.LogIntelligencePlatform,
+	llmAPIKey string,
+	logger *zap.Logger,
+) (rag.Embedder, error) {
+	spec := platform.Spec
+	embeddingProvider := "openai"
+	embeddingModel := "text-embedding-3-small"
+	embeddingEndpoint := ""
+	embeddingAPIKey := ""
+
+	// If LLM provider is google/gemini, default the embedding provider to google as well,
+	// and default the model to gemini-embedding-001.
+	if spec.LLM != nil && spec.LLM.Provider == diagnosev1alpha1.LLMProviderGoogle {
+		embeddingProvider = "google"
+		embeddingModel = "gemini-embedding-001"
+	}
+
+	if spec.Embedding != nil {
+		embeddingProvider = string(spec.Embedding.Provider)
+		if spec.Embedding.Model != "" {
+			embeddingModel = spec.Embedding.Model
+		}
+		embeddingEndpoint = spec.Embedding.Endpoint
+		if spec.Embedding.APIKeySecretRef != nil {
+			key, err := r.resolveSecretKey(ctx, platform.Namespace, spec.Embedding.APIKeySecretRef)
+			if err != nil {
+				return nil, fmt.Errorf("resolve embedding API key: %w", err)
+			}
+			embeddingAPIKey = key
+		}
+	}
+
+	// If no embedding API key was explicitly configured, but we have an LLM API key
+	// and the embedding provider matches the LLM provider, we reuse the LLM API key.
+	if embeddingAPIKey == "" && spec.LLM != nil && string(spec.LLM.Provider) == embeddingProvider {
+		embeddingAPIKey = llmAPIKey
+	}
+
+	return rag.NewEmbedder(embeddingProvider, embeddingAPIKey, embeddingModel, embeddingEndpoint, logger)
+}
+
+// buildQdrantClient constructs the Qdrant vector store client from the platform specification.
+func (r *LogIntelligencePlatformReconciler) buildQdrantClient(
+	ctx context.Context,
+	platform *diagnosev1alpha1.LogIntelligencePlatform,
+	logger *zap.Logger,
+) (*rag.QdrantClient, error) {
+	spec := platform.Spec
+	qdrantHost := "qdrant"
+	qdrantHTTPPort := 6333
+	qdrantAPIKey := ""
+	qdrantCollectionPrefix := "kube-diagnose"
+
+	if spec.Qdrant != nil {
+		if spec.Qdrant.Host != "" {
+			qdrantHost = spec.Qdrant.Host
+		}
+		if spec.Qdrant.HTTPPort > 0 {
+			qdrantHTTPPort = spec.Qdrant.HTTPPort
+		}
+		if spec.Qdrant.CollectionPrefix != "" {
+			qdrantCollectionPrefix = spec.Qdrant.CollectionPrefix
+		}
+		if spec.Qdrant.APIKeySecretRef != nil {
+			key, err := r.resolveSecretKey(ctx, platform.Namespace, spec.Qdrant.APIKeySecretRef)
+			if err != nil {
+				return nil, fmt.Errorf("resolve Qdrant API key: %w", err)
+			}
+			qdrantAPIKey = key
+		}
+	}
+	return rag.NewQdrantClient(qdrantHost, qdrantHTTPPort, qdrantAPIKey, qdrantCollectionPrefix, logger), nil
 }
 
 // resolveSecretKey fetches a secret key value from Kubernetes.
