@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"sort"
@@ -179,10 +180,21 @@ func (h *handlers) incidentsPage(w http.ResponseWriter, _ *http.Request) {
 		AffectedPods  int
 		LastSeen      string
 		Resolved      bool
+		RootCause     string
+		Confidence    string
+		Impact        string
 	}
 
 	rows := make([]row, 0, len(records))
 	for _, rec := range records {
+		rootCause := "No analysis"
+		confidence := "N/A"
+		impact := "N/A"
+		if rec.Analysis != nil {
+			rootCause = truncate(rec.Analysis.RootCause, 80)
+			confidence = fmt.Sprintf("%.0f%%", rec.Analysis.Confidence*100)
+			impact = truncate(rec.Analysis.Impact, 80)
+		}
 		rows = append(rows, row{
 			Fingerprint:   rec.Fingerprint,
 			Pattern:       truncate(rec.Pattern, 80),
@@ -193,6 +205,9 @@ func (h *handlers) incidentsPage(w http.ResponseWriter, _ *http.Request) {
 			AffectedPods:  len(rec.AffectedPods),
 			LastSeen:      rec.LastSeen.Format("2006-01-02 15:04:05"),
 			Resolved:      rec.Resolved,
+			RootCause:     rootCause,
+			Confidence:    confidence,
+			Impact:        impact,
 		})
 	}
 	renderTemplate(w, incidentsHTML, map[string]interface{}{"Incidents": rows})
@@ -449,7 +464,7 @@ const incidentsHTML = `<!DOCTYPE html>
   <table>
     <thead><tr>
       <th>Pattern</th><th>Namespace</th><th>Severity</th>
-      <th>Count</th><th>Pods</th><th>Last Seen</th><th>Status</th>
+      <th>Count</th><th>Pods</th><th>Root Cause</th><th>Confidence</th><th>Impact</th><th>Last Seen</th><th>Status</th>
     </tr></thead>
     <tbody>
     {{range .Incidents}}
@@ -459,6 +474,9 @@ const incidentsHTML = `<!DOCTYPE html>
       <td><span class="badge {{.SeverityClass}}">{{.Severity}}</span></td>
       <td>{{.Count}}</td>
       <td>{{.AffectedPods}}</td>
+      <td title="{{.RootCause}}">{{.RootCause}}</td>
+      <td><span class="badge severity-low">{{.Confidence}}</span></td>
+      <td title="{{.Impact}}">{{.Impact}}</td>
       <td><span class="mono">{{.LastSeen}}</span></td>
       <td>
         {{if .Resolved}}
