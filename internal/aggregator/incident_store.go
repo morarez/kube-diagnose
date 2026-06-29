@@ -361,6 +361,19 @@ func (s *IncidentStore) syncStatus(ctx context.Context, rec *IncidentRecord, crd
 	fingerprint := rec.Fingerprint
 	sample := rec.SampleMessage
 	policyRef := rec.PolicyName
+	var analysis *AnalysisResultData
+	if rec.Analysis != nil {
+		analysis = &AnalysisResultData{
+			RootCause:          rec.Analysis.RootCause,
+			Confidence:         rec.Analysis.Confidence,
+			Impact:             rec.Analysis.Impact,
+			Severity:           rec.Analysis.Severity,
+			RecommendedActions: rec.Analysis.RecommendedActions,
+			RelatedRunbooks:    rec.Analysis.RelatedRunbooks,
+			AnalysisSource:     rec.Analysis.AnalysisSource,
+			TokensUsed:         rec.Analysis.TokensUsed,
+		}
+	}
 	s.mu.RUnlock()
 
 	// Determine phase from resolved flag and count.
@@ -393,6 +406,28 @@ func (s *IncidentStore) syncStatus(ctx context.Context, rec *IncidentRecord, crd
 	current.Status.Severity = v1alpha1.IncidentSeverity(severity)
 	current.Status.Resolved = resolved
 	current.Status.PolicyRef = policyRef
+
+	if analysis != nil {
+		actions := make([]v1alpha1.RecommendedAction, len(analysis.RecommendedActions))
+		for i, act := range analysis.RecommendedActions {
+			actions[i] = v1alpha1.RecommendedAction{
+				Step:   i + 1,
+				Action: act,
+			}
+		}
+		current.Status.Analysis = &v1alpha1.AIAnalysis{
+			RootCause:          analysis.RootCause,
+			Confidence:         analysis.Confidence,
+			Impact:             analysis.Impact,
+			Severity:           v1alpha1.IncidentSeverity(analysis.Severity),
+			RecommendedActions: actions,
+			RelatedRunbooks:    analysis.RelatedRunbooks,
+			AnalysisSource:     analysis.AnalysisSource,
+			TokensUsed:         analysis.TokensUsed,
+		}
+	} else {
+		current.Status.Analysis = nil
+	}
 
 	if err := s.k8sClient.Status().Patch(ctx, current, patch); err != nil {
 		return fmt.Errorf("status patch incident %s/%s: %w", rec.Namespace, crdName, err)
