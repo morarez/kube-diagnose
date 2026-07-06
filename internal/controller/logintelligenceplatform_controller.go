@@ -188,6 +188,9 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	// ── Aggregator ────────────────────────────────────────────────────────────
 	fingerprinter := aggregator.NewFingerprinter()
 	incidentStore := aggregator.NewIncidentStore(r.Client, fingerprinter, logger)
+	if err := incidentStore.LoadExistingIncidents(childCtx); err != nil {
+		logger.Warn("failed to load existing incidents from kubernetes on startup", zap.Error(err))
+	}
 	patternDetector := aggregator.NewPatternDetector(logger)
 	go patternDetector.CleanupOldData(childCtx)
 	incidentStore.StartPeriodicSync(childCtx, 30*time.Second)

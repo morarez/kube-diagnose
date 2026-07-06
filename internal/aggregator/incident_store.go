@@ -492,3 +492,90 @@ func affectedPodsToResources(namespace string, pods map[string]struct{}) []v1alp
 	}
 	return out
 }
+
+// LoadExistingIncidents fetches active (unresolved) Incidents from the Kubernetes API
+// and populates the in-memory records map to recover store state after a restart.
+func (s *IncidentStore) LoadExistingIncidents(ctx context.Context) error {
+	var list v1alpha1.IncidentList
+	if err := s.k8sClient.List(ctx, &list); err != nil {
+		return fmt.Errorf("list existing incidents: %w", err)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, item := range list.Items {
+		if item.Status.Resolved {
+			continue
+		}
+
+		fp := item.Status.Fingerprint
+		if fp == "" {
+			continue
+		}
+
+		affectedPods := make(map[string]struct{})
+		for _, res := range item.Status.AffectedResources {
+			if res.Kind == "Pod" {
+				affectedPods[res.Name] = struct{}{}
+			}
+		}
+
+		var analysis *AnalysisResultData
+		if item.Status.Analysis != nil {
+			var actions []string
+			for _, act := range item.Status.Analysis.RecommendedActions {
+				actions = append(actions, act.Action)
+			}
+			analysis = &AnalysisResultData{
+				RootCause:          item.Status.Analysis.RootCause,
+				Confidence:         item.Status.Analysis.Confidence,
+				Impact:             item.Status.Analysis.Impact,
+				Severity:           string(item.Status.Analysis.Severity),
+				RecommendedActions: actions,
+				RelatedRunbooks:    item.Status.Analysis.RelatedRunbooks,
+				AnalysisSource:     item.Status.Analysis.AnalysisSource,
+				TokensUsed:         item.Status.Analysis.TokensUsed,
+			}
+		}
+
+		var firstSeen time.Time
+		if item.Status.FirstSeen != nil {
+			firstSeen = item.Status.FirstSeen.Time
+		}
+		var lastSeen time.Time
+		if item.Status.LastSeen != nil {
+			lastSeen = item.Status.LastSeen.Time
+		}
+
+		// FrequencyWindows is kept in-memory to calculate burst rates.
+		// Since old log event timestamps are not persisted in standard CRD status,
+		// we initialize an empty tracking map for the sliding windows.
+		freqWindows := make(map[string][]time.Time)
+
+		s.records[fp] = &IncidentRecord{
+			Fingerprint:      fp,
+			Pattern:          item.Status.Pattern,
+			SampleMessage:    item.Status.SampleLogMessage,
+			Namespace:        item.Namespace,
+			PolicyName:       item.Status.PolicyRef,
+			Count:            item.Status.Count,
+			AffectedPods:     affectedPods,
+			FirstSeen:        firstSeen,
+			LastSeen:         lastSeen,
+			Severity:         string(item.Status.Severity),
+			Resolved:         item.Status.Resolved,
+			CRDName:          item.Name,
+			Analysis:         analysis,
+			FrequencyWindows: freqWindows,
+		}
+
+		s.logger.Info("reconstructed in-memory state for active incident",
+			zap.String("fingerprint", fp),
+			zap.String("crd", item.Name),
+			zap.Int64("count", item.Status.Count),
+		)
+	}
+
+	return nil
+}
