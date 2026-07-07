@@ -353,7 +353,7 @@ func (w *Watcher) streamOnce(
 		return true, false
 	}
 
-	running, checkErr := w.isPodStillRunning(ctx, key.namespace, key.pod)
+	running, checkErr := w.isPodStillRunning(ctx, key.namespace, key.pod, key.container)
 	if checkErr != nil {
 		w.logger.Warn("could not determine pod phase; will retry",
 			zap.String("key", key.String()),
@@ -373,9 +373,9 @@ func (w *Watcher) streamOnce(
 	return false, false
 }
 
-// isPodStillRunning returns true when the pod exists and its phase is
-// Running or Pending (i.e. it may still emit logs in the future).
-func (w *Watcher) isPodStillRunning(ctx context.Context, namespace, name string) (bool, error) {
+// isPodStillRunning returns true when the pod exists, its phase is Running or
+// Pending, and the specific container is either running or expected to restart.
+func (w *Watcher) isPodStillRunning(ctx context.Context, namespace, name, containerName string) (bool, error) {
 	pod, err := w.client.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return false, fmt.Errorf("get pod %s/%s: %w", namespace, name, err)
@@ -383,6 +383,19 @@ func (w *Watcher) isPodStillRunning(ctx context.Context, namespace, name string)
 
 	switch pod.Status.Phase {
 	case corev1.PodRunning, corev1.PodPending:
+		// Check container status to see if it is permanently terminated.
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Name == containerName {
+				if cs.State.Terminated != nil {
+					policy := pod.Spec.RestartPolicy
+					if policy == corev1.RestartPolicyNever ||
+						(policy == corev1.RestartPolicyOnFailure && cs.State.Terminated.ExitCode == 0) {
+						return false, nil // permanently terminated
+					}
+				}
+				break
+			}
+		}
 		return true, nil
 	default:
 		// Succeeded, Failed, Unknown — treat as terminal.
