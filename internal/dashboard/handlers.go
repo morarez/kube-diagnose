@@ -191,9 +191,9 @@ func (h *handlers) incidentsPage(w http.ResponseWriter, _ *http.Request) {
 		confidence := "N/A"
 		impact := "N/A"
 		if rec.Analysis != nil {
-			rootCause = truncate(rec.Analysis.RootCause, 80)
+			rootCause = rec.Analysis.RootCause
 			confidence = fmt.Sprintf("%.0f%%", rec.Analysis.Confidence*100)
-			impact = truncate(rec.Analysis.Impact, 80)
+			impact = rec.Analysis.Impact
 		}
 		rows = append(rows, row{
 			Fingerprint:   rec.Fingerprint,
@@ -452,6 +452,42 @@ const incidentsHTML = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Incidents — Kube-Diagnose</title>` + baseCSS + `
+<style>
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.6);
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  padding: 1.5rem;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  text-align: left;
+}
+.modal-close {
+  position: absolute;
+  right: 1.25rem;
+  top: 0.75rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: var(--muted);
+}
+.modal-close:hover {
+  color: var(--text);
+}
+</style>
 </head>
 <body>` + navHTML + `
 <div class="container">
@@ -464,7 +500,7 @@ const incidentsHTML = `<!DOCTYPE html>
   <table>
     <thead><tr>
       <th>Pattern</th><th>Namespace</th><th>Severity</th>
-      <th>Count</th><th>Pods</th><th>Root Cause</th><th>Confidence</th><th>Impact</th><th>Last Seen</th><th>Status</th>
+      <th>Count</th><th>Pods</th><th>Analysis</th><th>Confidence</th><th>Last Seen</th><th>Status</th>
     </tr></thead>
     <tbody>
     {{range .Incidents}}
@@ -474,9 +510,14 @@ const incidentsHTML = `<!DOCTYPE html>
       <td><span class="badge {{.SeverityClass}}">{{.Severity}}</span></td>
       <td>{{.Count}}</td>
       <td>{{.AffectedPods}}</td>
-      <td title="{{.RootCause}}">{{.RootCause}}</td>
+      <td>
+        {{if ne .RootCause "No analysis"}}
+          <button onclick="document.getElementById('modal-{{.Fingerprint}}').style.display='flex'" style="background:var(--accent); color:var(--bg); border:none; border-radius:4px; padding:0.25rem 0.5rem; font-size:0.75rem; font-weight:600; cursor:pointer;">View</button>
+        {{else}}
+          <span style="color:var(--muted); font-size:0.75rem;">None</span>
+        {{end}}
+      </td>
       <td><span class="badge severity-low">{{.Confidence}}</span></td>
-      <td title="{{.Impact}}">{{.Impact}}</td>
       <td><span class="mono">{{.LastSeen}}</span></td>
       <td>
         {{if .Resolved}}
@@ -486,6 +527,22 @@ const incidentsHTML = `<!DOCTYPE html>
         {{end}}
       </td>
     </tr>
+    {{if ne .RootCause "No analysis"}}
+    <div id="modal-{{.Fingerprint}}" class="modal" onclick="if(event.target == this) this.style.display='none'">
+      <div class="modal-content">
+        <span class="modal-close" onclick="document.getElementById('modal-{{.Fingerprint}}').style.display='none'">&times;</span>
+        <h2 style="font-size:1.1rem; margin-bottom:1.25rem; border-bottom:1px solid var(--border); padding-bottom:0.5rem; color:var(--accent); font-weight:700;">AI Diagnosis Details</h2>
+        <div style="margin-bottom:1.25rem;">
+          <h3 style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; margin-bottom:0.25rem; font-weight:600;">Root Cause</h3>
+          <p style="font-size:0.875rem; color:var(--text); line-height:1.5; white-space:pre-wrap;">{{.RootCause}}</p>
+        </div>
+        <div>
+          <h3 style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; margin-bottom:0.25rem; font-weight:600;">Impact</h3>
+          <p style="font-size:0.875rem; color:var(--text); line-height:1.5; white-space:pre-wrap;">{{.Impact}}</p>
+        </div>
+      </div>
+    </div>
+    {{end}}
     {{end}}
     </tbody>
   </table>
