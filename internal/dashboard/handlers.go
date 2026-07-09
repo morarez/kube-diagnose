@@ -415,7 +415,6 @@ const navHTML = `
   <a href="/">Overview</a>
   <a href="/incidents">Incidents</a>
   <a href="/knowledge-base">Knowledge Base</a>
-  <a href="/api/v1/stats" target="_blank">API</a>
 </nav>`
 
 const indexHTML = `<!DOCTYPE html>
@@ -438,8 +437,6 @@ const indexHTML = `<!DOCTYPE html>
   <div class="card">
     <h2 style="margin-bottom:1rem;font-size:1rem;color:var(--muted)">QUICK ACTIONS</h2>
     <p><a href="/incidents">→ View all incidents</a></p>
-    <p style="margin-top:0.5rem"><a href="/api/v1/incidents">→ JSON API: incidents</a></p>
-    <p style="margin-top:0.5rem"><a href="/api/v1/stats">→ JSON API: platform stats</a></p>
   </div>
   <div class="card" style="border-color:rgba(88,166,255,0.3)">
     <h2 style="margin-bottom:0.5rem;font-size:0.9rem;color:var(--muted)">HOW IT WORKS</h2>
