@@ -4,6 +4,8 @@
 
 It includes an embedded, real-time web dashboard (powered by HTMX).
 
+![screenshot](img/screenshot.png)
+
 ---
 
 ## Features
