@@ -171,18 +171,19 @@ func (h *handlers) incidentsPage(w http.ResponseWriter, _ *http.Request) {
 	})
 
 	type row struct {
-		Fingerprint   string
-		Pattern       string
-		Namespace     string
-		Count         int64
-		Severity      string
-		SeverityClass string
-		AffectedPods  int
-		LastSeen      string
-		Resolved      bool
-		RootCause     string
-		Confidence    string
-		Impact        string
+		Fingerprint        string
+		Pattern            string
+		Namespace          string
+		Count              int64
+		Severity           string
+		SeverityClass      string
+		AffectedPods       int
+		LastSeen           string
+		Resolved           bool
+		RootCause          string
+		Confidence         string
+		Impact             string
+		RecommendedActions []string
 	}
 
 	rows := make([]row, 0, len(records))
@@ -190,24 +191,27 @@ func (h *handlers) incidentsPage(w http.ResponseWriter, _ *http.Request) {
 		rootCause := "No analysis"
 		confidence := "N/A"
 		impact := "N/A"
+		var actions []string
 		if rec.Analysis != nil {
 			rootCause = rec.Analysis.RootCause
 			confidence = fmt.Sprintf("%.0f%%", rec.Analysis.Confidence*100)
 			impact = rec.Analysis.Impact
+			actions = rec.Analysis.RecommendedActions
 		}
 		rows = append(rows, row{
-			Fingerprint:   rec.Fingerprint,
-			Pattern:       truncate(rec.Pattern, 80),
-			Namespace:     rec.Namespace,
-			Count:         rec.Count,
-			Severity:      rec.Severity,
-			SeverityClass: severityClass(rec.Severity),
-			AffectedPods:  len(rec.AffectedPods),
-			LastSeen:      rec.LastSeen.Format("2006-01-02 15:04:05"),
-			Resolved:      rec.Resolved,
-			RootCause:     rootCause,
-			Confidence:    confidence,
-			Impact:        impact,
+			Fingerprint:        rec.Fingerprint,
+			Pattern:            truncate(rec.Pattern, 80),
+			Namespace:          rec.Namespace,
+			Count:              rec.Count,
+			Severity:           rec.Severity,
+			SeverityClass:      severityClass(rec.Severity),
+			AffectedPods:       len(rec.AffectedPods),
+			LastSeen:           rec.LastSeen.Format("2006-01-02 15:04:05"),
+			Resolved:           rec.Resolved,
+			RootCause:          rootCause,
+			Confidence:         confidence,
+			Impact:             impact,
+			RecommendedActions: actions,
 		})
 	}
 	renderTemplate(w, incidentsHTML, map[string]interface{}{"Incidents": rows})
@@ -529,17 +533,27 @@ const incidentsHTML = `<!DOCTYPE html>
     </tr>
     {{if ne .RootCause "No analysis"}}
     <div id="modal-{{.Fingerprint}}" class="modal" onclick="if(event.target == this) this.style.display='none'">
-      <div class="modal-content">
+      <div class="modal-content" style="max-height:80vh; overflow-y:auto;">
         <span class="modal-close" onclick="document.getElementById('modal-{{.Fingerprint}}').style.display='none'">&times;</span>
         <h2 style="font-size:1.1rem; margin-bottom:1.25rem; border-bottom:1px solid var(--border); padding-bottom:0.5rem; color:var(--accent); font-weight:700;">AI Diagnosis Details</h2>
         <div style="margin-bottom:1.25rem;">
           <h3 style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; margin-bottom:0.25rem; font-weight:600;">Root Cause</h3>
           <p style="font-size:0.875rem; color:var(--text); line-height:1.5; white-space:pre-wrap;">{{.RootCause}}</p>
         </div>
-        <div>
+        <div style="margin-bottom:1.25rem;">
           <h3 style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; margin-bottom:0.25rem; font-weight:600;">Impact</h3>
           <p style="font-size:0.875rem; color:var(--text); line-height:1.5; white-space:pre-wrap;">{{.Impact}}</p>
         </div>
+        {{if .RecommendedActions}}
+        <div>
+          <h3 style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; margin-bottom:0.5rem; font-weight:600;">Recommended Actions</h3>
+          <ul style="font-size:0.875rem; color:var(--text); line-height:1.5; padding-left:1.25rem; margin:0;">
+            {{range .RecommendedActions}}
+              <li style="margin-bottom:0.5rem;">{{.}}</li>
+            {{end}}
+          </ul>
+        </div>
+        {{end}}
       </div>
     </div>
     {{end}}
