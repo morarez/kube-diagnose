@@ -9,9 +9,9 @@ import (
 // systemPrompt is the fixed system-level instruction sent to every provider.
 // It establishes the assistant's persona, constrains output to valid JSON, and
 // includes a few-shot example so the model understands the expected schema.
-const systemPrompt = `You are an expert Site Reliability Engineer (SRE) specialising in ` +
+const systemPrompt = `You are an expert SRE specialising in ` +
 	`Kubernetes operations and incident management.
-Your task is to analyse the incident details provided by the user and produce a structured diagnosis.
+Your task is to analyse the incident details provided and produce a structured diagnosis.
 
 CRITICAL RULES:
 1. You MUST respond with ONLY valid JSON — no markdown, no prose, no code fences.
