@@ -2,7 +2,7 @@ module github.com/morarez/kube-diagnose
 
 go 1.26.0
 
-godebug default=go1.24
+godebug default=go1.26
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.57.0
