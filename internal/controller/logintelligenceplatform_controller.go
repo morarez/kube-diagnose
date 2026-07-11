@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,9 +43,28 @@ import (
 )
 
 // PlatformComponents holds all runtime components owned by the platform.
-// This singleton is initialised by the LogIntelligencePlatformReconciler
-// and shared with the other controllers via a package-level variable.
-var platformComponents *PlatformComponents
+// platformComponents is the singleton runtime state for the platform.
+// All access must go through getComponents() / setComponents() to avoid
+// data races when the reconciler is called concurrently.
+var (
+	platformComponentsMu sync.RWMutex
+	platformComponents   *PlatformComponents
+)
+
+// getComponents returns the current PlatformComponents snapshot under the read
+// lock. Returns nil when the platform has not been initialised yet.
+func getComponents() *PlatformComponents {
+	platformComponentsMu.RLock()
+	defer platformComponentsMu.RUnlock()
+	return platformComponents
+}
+
+// setComponents atomically replaces the platform singleton.
+func setComponents(c *PlatformComponents) {
+	platformComponentsMu.Lock()
+	platformComponents = c
+	platformComponentsMu.Unlock()
+}
 
 // PlatformComponents groups the shared runtime objects for the platform.
 type PlatformComponents struct {
@@ -109,8 +129,8 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	platform *diagnosev1alpha1.LogIntelligencePlatform,
 ) error {
 	// Tear down existing components if running.
-	if platformComponents != nil && platformComponents.cancel != nil {
-		platformComponents.cancel()
+	if old := getComponents(); old != nil && old.cancel != nil {
+		old.cancel()
 	}
 
 	logger, _ := zap.NewProduction()
@@ -214,7 +234,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	// ── Log processing pipeline ───────────────────────────────────────────────
 	go r.runLogPipeline(childCtx, logCh, fingerprinter, incidentStore, patternDetector, ragEngine, analyzer, logger)
 
-	platformComponents = &PlatformComponents{
+	setComponents(&PlatformComponents{
 		Watcher:         watcher,
 		IncidentStore:   incidentStore,
 		PatternDetector: patternDetector,
@@ -224,7 +244,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 		LogCh:           logCh,
 		Logger:          logger,
 		cancel:          cancel,
-	}
+	})
 
 	logger.Info("platform components initialised successfully",
 		zap.String("platform", platform.Name),

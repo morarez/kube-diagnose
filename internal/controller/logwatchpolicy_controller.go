@@ -67,7 +67,7 @@ func (r *LogWatchPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Platform components must be ready before we can watch pods.
-	if platformComponents == nil {
+	if getComponents() == nil {
 		log.Info("Platform components not yet initialised; requeuing", "policy", req.Name)
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	}
@@ -100,7 +100,7 @@ func (r *LogWatchPolicyReconciler) syncWatchers(
 		}
 	}
 
-	watcher := platformComponents.Watcher
+	watcher := getComponents().Watcher
 	totalPods := 0
 
 	for _, ns := range namespacesToWatch {

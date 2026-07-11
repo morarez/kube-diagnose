@@ -72,7 +72,7 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// ── Index resolved incidents in RAG ───────────────────────────────────────
-	if incident.Status.Resolved && platformComponents != nil &&
+	if comps := getComponents(); incident.Status.Resolved && comps != nil &&
 		incident.Status.Analysis != nil &&
 		incident.Status.Phase == diagnosev1alpha1.IncidentPhaseResolved {
 
@@ -95,7 +95,7 @@ func (r *IncidentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				resolution = strings.Join(actions, "; ")
 			}
 
-			if err := platformComponents.Engine.IndexResolvedIncident(
+			if err := comps.Engine.IndexResolvedIncident(
 				indexCtx,
 				incident.Status.Fingerprint,
 				incident.Status.Pattern,
