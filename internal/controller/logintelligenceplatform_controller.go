@@ -212,7 +212,7 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 	}
 
 	// ── Log processing pipeline ───────────────────────────────────────────────
-	go r.runLogPipeline(childCtx, logCh, incidentStore, patternDetector, ragEngine, analyzer, logger)
+	go r.runLogPipeline(childCtx, logCh, fingerprinter, incidentStore, patternDetector, ragEngine, analyzer, logger)
 
 	platformComponents = &PlatformComponents{
 		Watcher:         watcher,
@@ -239,13 +239,13 @@ func (r *LogIntelligencePlatformReconciler) ensurePlatformComponents(
 func (r *LogIntelligencePlatformReconciler) runLogPipeline(
 	ctx context.Context,
 	logCh <-chan *logwatcher.LogEntry,
+	fp *aggregator.Fingerprinter,
 	store *aggregator.IncidentStore,
 	detector *aggregator.PatternDetector,
 	ragEngine *rag.Engine,
 	analyzer *llm.Analyzer,
 	logger *zap.Logger,
 ) {
-	fp := aggregator.NewFingerprinter()
 	for {
 		select {
 		case <-ctx.Done():
